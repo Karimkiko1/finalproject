@@ -5,7 +5,7 @@ const webpack = require('webpack');
 module.exports = {
   entry: './src/index.js',
   output: {
-    path: path.resolve(__dirname, 'dist'),
+    path: path.resolve(__dirname, 'public'),
     filename: 'bundle.[contenthash].js',
     publicPath: '/',
     clean: true
@@ -41,7 +41,7 @@ module.exports = {
   ],
   devServer: {
     static: {
-      directory: path.join(__dirname, 'dist')
+      directory: path.join(__dirname, 'public')
     },
     hot: true,
     historyApiFallback: true,
