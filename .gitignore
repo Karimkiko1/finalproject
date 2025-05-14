@@ -1,0 +1,56 @@
+node_modules
+node_modules
+node_modules
+"scripts": {
+  "dev": "webpack serve --mode development --open --hot"
+},
+{
+  "presets": [
+    [
+      "@babel/preset-env",
+      {
+        "useBuiltIns": "usage",
+        "corejs": 3
+      }
+    ]
+  ],
+  "outputDirectory": "dist"
+}
+node_modules
+node_modules
+node_modules
+node_modules
+
+import CBM from '/CBM.json';
+import CBM_Main from '/CBM_Main.json';
+import lottieload from '/lottieload.json';
+
+const webpack = require('webpack');
+
+module.exports = {
+  resolve: {
+    fallback: {
+      path: require.resolve('path-browserify'),
+      crypto: require.resolve('crypto-browserify'),
+      stream: require.resolve('stream-browserify'),
+      zlib: require.resolve('browserify-zlib'),
+      util: require.resolve('util/'),
+      os: require.resolve('os-browserify/browser'),
+      buffer: require.resolve('buffer/'),
+      fs: false, // Disable fs as it's not available in the browser
+      http: require.resolve('stream-http'),
+      https: require.resolve('https-browserify'),
+      url: require.resolve('url/'),
+      vm: require.resolve('vm-browserify'),
+    },
+  },
+  plugins: [
+    new webpack.ProvidePlugin({
+      Buffer: ['buffer', 'Buffer'],
+      process: 'process/browser',
+    }),
+  ],
+};
+node_modules
+node_modules
+.vercel
