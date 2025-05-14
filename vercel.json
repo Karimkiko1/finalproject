@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "outputDirectory": "public",
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "frontend/public",
+        "buildCommand": "cd frontend && npm install && npm run vercel-build"
+      }
+    }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/frontend/public/$1" }
+  ]
+}
