@@ -14,8 +14,12 @@ function App() {
     <Router>
       {/* Navigation Bar */}
       <nav style={{ display: "flex", gap: 24, padding: 24, background: "#f8fafc" }}>
-        <Link to="/" style={{ fontWeight: 600, color: "#2563eb", textDecoration: "none" }}>Trip Assignment</Link>
-        <Link to="/supplier-trip-assignment" style={{ fontWeight: 600, color: "#be123c", textDecoration: "none" }}>Supplier Trip Assignment</Link>
+        <Link to="/" style={{ fontWeight: 600, color: "#2563eb", textDecoration: "none" }}>Dashboard</Link>
+        <Link to="/drivers" style={{ fontWeight: 600, color: "#0ea5e9", textDecoration: "none" }}>Drivers Locations</Link>
+        <Link to="/RetailersLocations" style={{ fontWeight: 600, color: "#22c55e", textDecoration: "none" }}>Retailers Locations</Link>
+        <Link to="/cbm" style={{ fontWeight: 600, color: "#f59e42", textDecoration: "none" }}>CBM Calculator</Link>
+        <Link to="/trips" style={{ fontWeight: 600, color: "#be123c", textDecoration: "none" }}>Trip Assignment</Link>
+        <Link to="/supplier-trip-assignment" style={{ fontWeight: 600, color: "#a855f7", textDecoration: "none" }}>Supplier Trip Assignment</Link>
       </nav>
       <Routes>
         <Route path="/" element={<Dashboard />} />
