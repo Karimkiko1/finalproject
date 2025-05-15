@@ -88,7 +88,8 @@ function getOrderViewTable(data) {
     grouped[order_id].product_count += 1;
     grouped[order_id].total_cbm += parseFloat(row.calculated_cbm) || 0;
     grouped[order_id].total_weight += parseFloat(row.calculated_weight) || 0;
-    grouped[order_id].total_gmv += getGMV(row);
+    // Fix: Use row.total_gmv if present, else getGMV(row)
+    grouped[order_id].total_gmv += row.total_gmv !== undefined ? parseFloat(row.total_gmv) || 0 : getGMV(row);
   });
   return Object.values(grouped);
 }
@@ -111,7 +112,8 @@ function getSupplierViewTable(data) {
     grouped[supplier].product_count += 1;
     grouped[supplier].total_cbm += parseFloat(row.calculated_cbm) || 0;
     grouped[supplier].total_weight += parseFloat(row.calculated_weight) || 0;
-    grouped[supplier].total_gmv += getGMV(row);
+    // Fix: Use row.total_gmv if present, else getGMV(row)
+    grouped[supplier].total_gmv += row.total_gmv !== undefined ? parseFloat(row.total_gmv) || 0 : getGMV(row);
   });
   return Object.values(grouped).map(g => ({
     ...g,
@@ -220,18 +222,23 @@ const CBMCalculator = () => {
     ]
   };
 
-  // Load fallback data on mount
+  // Load fallback data and runsheet data on mount
   useEffect(() => {
     setLoadingFallback(true);
-    loadSheetData('Fallback')
-      .then(data => {
-        setFallbackData(data);
+    Promise.all([
+      loadSheetData('Fallback'),
+      loadSheetData('Runsheet')
+    ])
+      .then(([fallback, runsheet]) => {
+        setFallbackData(fallback);
+        setRunsheetData(runsheet); // This is now the default data for summary
         setLoadingFallback(false);
       })
       .catch((err) => {
         setFallbackData(null);
+        setRunsheetData([]);
         setLoadingFallback(false);
-        setError("Failed to load fallback data: " + (err?.message || err));
+        setError("Failed to load fallback or runsheet data: " + (err?.message || err));
       });
   }, []);
 
@@ -394,14 +401,14 @@ const CBMCalculator = () => {
     }
   };
 
-  // Summary stats
-  const summary = results ? (() => {
-    // Only include rows with valid, positive CBM and Weight for totals and averages
-    const validRows = results.filter(r =>
+  // Calculate summary from runsheetData (from sheet or upload)
+  const summary = React.useMemo(() => {
+    if (!runsheetData.length) return {};
+    // Use the same logic as before
+    const validRows = runsheetData.filter(r =>
       typeof r.calculated_cbm === "number" && r.calculated_cbm >= 0 &&
       typeof r.calculated_weight === "number" && r.calculated_weight >= 0
     );
-    // Only count unique, non-empty order IDs
     const uniqueOrderIds = [...new Set(validRows.map(r => r.order_id).filter(Boolean))];
     const totalCBM = validRows.reduce((sum, r) => sum + r.calculated_cbm, 0);
     const totalWeight = validRows.reduce((sum, r) => sum + r.calculated_weight, 0);
@@ -409,6 +416,7 @@ const CBMCalculator = () => {
     const uniqueOrders = uniqueOrderIds.length;
     const avgCBM = uniqueOrders ? totalCBM / uniqueOrders : 0;
     const avgWeight = uniqueOrders ? totalWeight / uniqueOrders : 0;
+    // Optionally, compute topCategories if you want
     return {
       totalCBM,
       totalWeight,
@@ -417,7 +425,7 @@ const CBMCalculator = () => {
       avgCBM,
       avgWeight
     };
-  })() : {};
+  }, [runsheetData]);
 
   // Defensive: never render blank page
   try {
@@ -524,7 +532,7 @@ const CBMCalculator = () => {
           display: "flex",
           alignItems: "center",
           gap: 18,
-          justifyContent: "flex-start",
+          justifyContent: "space-between", // changed from flex-start
           position: "sticky",
           top: 0,
           zIndex: 10
@@ -552,6 +560,23 @@ const CBMCalculator = () => {
           style={{ display: 'none' }}
           />
         </label>
+        <a
+          href="https://redash.cartona.com/queries/22442" // <-- set your link here
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            background: 'linear-gradient(90deg, #22c55e 0%, #bef264 100%)',
+            color: '#fff',
+            padding: '12px 28px',
+            borderRadius: 8,
+            fontWeight: 600,
+            fontSize: 16,
+            textDecoration: 'none',
+            boxShadow: '0 2px 8px 0 rgba(34,197,94,0.08)'
+          }}
+        >
+          Go to Link
+        </a>
         {runsheetData.length > 0 && (
           <span style={{ color: '#2563eb', fontWeight: 500, fontSize: 15 }}>
           {runsheetData.length} rows loaded
@@ -580,7 +605,7 @@ const CBMCalculator = () => {
           alignItems: "center",
           justifyContent: "center",
           position: "relative",
-          maxWidth: 1200, // <--- Updated value to make it wider.
+          maxWidth: 1200,
           marginLeft: "auto",
           marginRight: "auto",
           boxSizing: "border-box",
@@ -604,6 +629,7 @@ const CBMCalculator = () => {
           marginBottom: 18,
           width: "100%"
           }}>
+          {/* --- REPLACE fixedSummary with actual summary if available --- */}
           <div style={{
             background: "linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)",
             color: "#fff",
@@ -615,7 +641,7 @@ const CBMCalculator = () => {
             margin: "0 12px"
           }}>
             <div style={{ fontSize: 15, opacity: 0.9 }}>Total Orders</div>
-            <div style={{ fontWeight: 700, fontSize: 28 }}>{fixedSummary.totalOrders}</div>
+            <div style={{ fontWeight: 700, fontSize: 28 }}>{summary.totalOrders ?? 0}</div>
           </div>
           <div style={{
             background: "linear-gradient(90deg, #0ea5e9 0%, #38bdf8 100%)",
@@ -628,7 +654,7 @@ const CBMCalculator = () => {
             margin: "0 12px"
           }}>
             <div style={{ fontSize: 15, opacity: 0.9 }}>Total CBM</div>
-            <div style={{ fontWeight: 700, fontSize: 28 }}>{fixedSummary.totalCBM}</div>
+            <div style={{ fontWeight: 700, fontSize: 28 }}>{summary.totalCBM?.toFixed(2) ?? 0}</div>
           </div>
           <div style={{
             background: "linear-gradient(90deg, #22c55e 0%, #bef264 100%)",
@@ -641,7 +667,7 @@ const CBMCalculator = () => {
             margin: "0 12px"
           }}>
             <div style={{ fontSize: 15, opacity: 0.9 }}>Total Weight</div>
-            <div style={{ fontWeight: 700, fontSize: 28 }}>{fixedSummary.totalWeight} kg</div>
+            <div style={{ fontWeight: 700, fontSize: 28 }}>{summary.totalWeight?.toFixed(2) ?? 0} kg</div>
           </div>
           <div style={{
             background: "linear-gradient(90deg, #f59e42 0%, #fbbf24 100%)",
@@ -654,7 +680,7 @@ const CBMCalculator = () => {
             margin: "0 12px"
           }}>
             <div style={{ fontSize: 15, opacity: 0.9 }}>Matched Products</div>
-            <div style={{ fontWeight: 700, fontSize: 28 }}>{fixedSummary.matched}</div>
+            <div style={{ fontWeight: 700, fontSize: 28 }}>{summary.matched ?? 0}</div>
           </div>
           <div style={{
             background: "linear-gradient(90deg, #a855f7 0%, #f472b6 100%)",
@@ -667,7 +693,7 @@ const CBMCalculator = () => {
             margin: "0 12px"
           }}>
             <div style={{ fontSize: 15, opacity: 0.9 }}>Unique Products</div>
-            <div style={{ fontWeight: 700, fontSize: 28 }}>{fixedSummary.uniqueProducts}</div>
+            <div style={{ fontWeight: 700, fontSize: 28 }}>{summary.uniqueProducts ?? 0}</div>
           </div>
           </div>
           <div style={{
@@ -688,7 +714,7 @@ const CBMCalculator = () => {
             margin: "0 12px"
           }}>
             <div style={{ fontSize: 15, color: "#64748b" }}>Avg CBM/Order</div>
-            <div style={{ fontWeight: 700, fontSize: 20 }}>{fixedSummary.avgCBM}</div>
+            <div style={{ fontWeight: 700, fontSize: 20 }}>{summary.avgCBM?.toFixed(3) ?? 0}</div>
           </div>
           <div style={{
             background: "#f1f5f9",
@@ -700,47 +726,50 @@ const CBMCalculator = () => {
             margin: "0 12px"
           }}>
             <div style={{ fontSize: 15, color: "#64748b" }}>Avg Weight/Order</div>
-            <div style={{ fontWeight: 700, fontSize: 20 }}>{fixedSummary.avgWeight} kg</div>
+            <div style={{ fontWeight: 700, fontSize: 20 }}>{summary.avgWeight?.toFixed(2) ?? 0} kg</div>
           </div>
           </div>
-          <div style={{ marginTop: 18, width: "100%", textAlign: "center" }}>
-          <div style={{ fontWeight: 600, color: "#2563eb", marginBottom: 6, fontSize: 16 }}>
-            Top Categories
-          </div>
-          <div style={{ 
-            display: "flex", 
-            gap: 12, 
-            justifyContent: "center", 
-            flexWrap: "wrap" 
-          }}>
-            {fixedSummary.topCategories.map((cat, idx) => (
-            <div key={cat.category} style={{
-              background: "#e0e7ef",
-              borderRadius: 8,
-              padding: "10px 18px",
-              fontWeight: 600,
-              color: "#0f172a",
-              fontSize: 15,
-              margin: "0 6px 12px 6px"
-            }}>
-              {idx + 1}. {cat.category} <span style={{ color: "#64748b", fontWeight: 400 }}> ({cat.count})</span>
-            </div>
-            ))}
-          </div>
-          </div>
-          {/* Large Lottie Animation on the right */}
-              <div style={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-end",
-                minWidth: 0,
-                position: "relative"
+          {/* Top Categories - only if available in summary */}
+          {summary.topCategories && (
+            <div style={{ marginTop: 18, width: "100%", textAlign: "center" }}>
+              <div style={{ fontWeight: 600, color: "#2563eb", marginBottom: 6, fontSize: 16 }}>
+                Top Categories
+              </div>
+              <div style={{ 
+                display: "flex", 
+                gap: 12, 
+                justifyContent: "center", 
+                flexWrap: "wrap" 
               }}>
-                <Lottie animationData={mainAnimation} loop={true} style={{ width: 320, height: 390, maxWidth: "100%" }} />
+                {summary.topCategories.map((cat, idx) => (
+                  <div key={cat.category} style={{
+                    background: "#e0e7ef",
+                    borderRadius: 8,
+                    padding: "10px 18px",
+                    fontWeight: 600,
+                    color: "#0f172a",
+                    fontSize: 15,
+                    margin: "0 6px 12px 6px"
+                  }}>
+                    {idx + 1}. {cat.category} <span style={{ color: "#64748b", fontWeight: 400 }}> ({cat.count})</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
+          {/* Large Lottie Animation on the right */}
+          <div style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            minWidth: 0,
+            position: "relative"
+          }}>
+            <Lottie animationData={mainAnimation} loop={true} style={{ width: 320, height: 390, maxWidth: "100%" }} />
+          </div>
+        </div>
+        )}
 
           {/* Upload & Mapping Section */}
           <div
@@ -1107,7 +1136,7 @@ const CBMCalculator = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {getOrderViewTable(results).map((row, idx) => (
+                      {getOrderViewTable(results).slice(0, 15).map((row, idx) => (
                         <tr key={idx} style={{ background: idx % 2 === 0 ? "#fff" : "#f1f5f9" }}>
                           <td style={{ padding: "8px 8px" }}>{row.supplier_name}</td>
                           <td style={{ padding: "8px 8px" }}>{row.order_id}</td>
@@ -1119,6 +1148,11 @@ const CBMCalculator = () => {
                       ))}
                     </tbody>
                   </table>
+                  {getOrderViewTable(results).length > 15 && (
+                    <div style={{ color: "#64748b", fontSize: 14, marginTop: 8 }}>
+                      Showing first 15 rows. Download for full data.
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1169,7 +1203,7 @@ const CBMCalculator = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {getSupplierViewTable(results).map((row, idx) => (
+                      {getSupplierViewTable(results).slice(0, 15).map((row, idx) => (
                         <tr key={idx} style={{ background: idx % 2 === 0 ? "#fff" : "#f1f5f9" }}>
                           <td style={{ padding: "8px 8px" }}>{row.supplier_name}</td>
                           <td style={{ padding: "8px 8px" }}>{row.order_count}</td>
@@ -1181,6 +1215,11 @@ const CBMCalculator = () => {
                       ))}
                     </tbody>
                   </table>
+                  {getSupplierViewTable(results).length > 15 && (
+                    <div style={{ color: "#64748b", fontSize: 14, marginTop: 8 }}>
+                      Showing first 15 rows. Download for full data.
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1233,7 +1272,7 @@ const CBMCalculator = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {getCustomerAreaViewTable(results).map((row, idx) => (
+                      {getCustomerAreaViewTable(results).slice(0, 15).map((row, idx) => (
                         <tr key={idx} style={{ background: idx % 2 === 0 ? "#fff" : "#f1f5f9" }}>
                           <td style={{ padding: "8px 8px" }}>{row.supplier_name}</td>
                           <td style={{ padding: "8px 8px" }}>{row.customer_area}</td>
@@ -1246,6 +1285,11 @@ const CBMCalculator = () => {
                       ))}
                     </tbody>
                   </table>
+                  {getCustomerAreaViewTable(results).length > 15 && (
+                    <div style={{ color: "#64748b", fontSize: 14, marginTop: 8 }}>
+                      Showing first 15 rows. Download for full data.
+                    </div>
+                  )}
                 </div>
               </div>
             </>
