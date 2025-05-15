@@ -52,7 +52,7 @@
   },
   "scripts": {
     "start": "webpack serve --mode development --open --hot",
-    "build": "webpack --output public",
+    "build": "webpack",
     "clean": "rm -rf node_modules && npm install"
   },
   "devDependencies": {
