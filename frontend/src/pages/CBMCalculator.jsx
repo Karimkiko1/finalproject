@@ -225,20 +225,15 @@ const CBMCalculator = () => {
   // Load fallback data and runsheet data on mount
   useEffect(() => {
     setLoadingFallback(true);
-    Promise.all([
-      loadSheetData('Fallback'),
-      loadSheetData('Runsheet')
-    ])
-      .then(([fallback, runsheet]) => {
-        setFallbackData(fallback);
-        setRunsheetData(runsheet); // This is now the default data for summary
+    loadSheetData('Runsheet')
+      .then(runsheet => {
+        setRunsheetData(runsheet);
         setLoadingFallback(false);
       })
       .catch((err) => {
-        setFallbackData(null);
         setRunsheetData([]);
         setLoadingFallback(false);
-        setError("Failed to load fallback or runsheet data: " + (err?.message || err));
+        setError("Failed to load runsheet data: " + (err?.message || err));
       });
   }, []);
 
@@ -401,22 +396,18 @@ const CBMCalculator = () => {
     }
   };
 
-  // Calculate summary from runsheetData (from sheet or upload)
+  // Calculate summary from runsheetData (from sheet only)
   const summary = React.useMemo(() => {
     if (!runsheetData.length) return {};
-    // Use the same logic as before
-    const validRows = runsheetData.filter(r =>
-      typeof r.calculated_cbm === "number" && r.calculated_cbm >= 0 &&
-      typeof r.calculated_weight === "number" && r.calculated_weight >= 0
-    );
-    const uniqueOrderIds = [...new Set(validRows.map(r => r.order_id).filter(Boolean))];
-    const totalCBM = validRows.reduce((sum, r) => sum + r.calculated_cbm, 0);
-    const totalWeight = validRows.reduce((sum, r) => sum + r.calculated_weight, 0);
-    const matched = validRows.filter(r => r.cbm_confidence > 0).length;
-    const uniqueOrders = uniqueOrderIds.length;
+    // Only use the raw Runsheet data, do not expect calculated_cbm/weight fields
+    // Try to sum numeric columns if present
+    const totalCBM = runsheetData.reduce((sum, r) => sum + (parseFloat(r.CBM) || 0), 0);
+    const totalWeight = runsheetData.reduce((sum, r) => sum + (parseFloat(r.Weight) || 0), 0);
+    const uniqueOrders = new Set(runsheetData.map(r => r.order_id || r.OrderID || r.ID || r["Order ID"])).size;
+    // Matched products: count rows with nonzero CBM or Weight
+    const matched = runsheetData.filter(r => (parseFloat(r.CBM) || 0) > 0 || (parseFloat(r.Weight) || 0) > 0).length;
     const avgCBM = uniqueOrders ? totalCBM / uniqueOrders : 0;
     const avgWeight = uniqueOrders ? totalWeight / uniqueOrders : 0;
-    // Optionally, compute topCategories if you want
     return {
       totalCBM,
       totalWeight,
