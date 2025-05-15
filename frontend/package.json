@@ -8,6 +8,7 @@
     "@babel/preset-react": "^7.27.1",
     "@flags-sdk/statsig": "^0.2.2",
     "@mui/material": "^5.15.13",
+    "@netlify/plugin-nextjs": "^5.11.1",
     "@statsig/react-bindings": "^3.16.2",
     "@types/gapi": "^0.0.47",
     "@types/gapi.client.sheets": "^4.0.20201031",
