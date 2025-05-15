@@ -7,6 +7,7 @@ import autoTable from "jspdf-autotable";
 import Lottie from "lottie-react";
 import animationData from "../../../CBM.json";
 import mainAnimation from "../../../CBM_Main.json";
+import { utils as XLSXUtils, writeFile as XLSXWriteFile } from "xlsx";
 
 // Helper: fallback matching logic (exported for potential reuse)
 export function getCBMWeightAppScriptStyle(row, fallbackData) {
@@ -58,6 +59,128 @@ export function getCBMWeightAppScriptStyle(row, fallbackData) {
   } catch (error) {
     return { confidence: 0, cbm: 0, weight: 0 };
   }
+}
+
+// Helper for GMV (Gross Merchandise Value) calculation
+function getGMV(row) {
+  if (row.total_price) return parseFloat(row.total_price) || 0;
+  if (row.price) return parseFloat(row.price) || 0;
+  if (row.gmv) return parseFloat(row.gmv) || 0;
+  if (row.total_weight) return parseFloat(row.total_weight) * 100;
+  return 0;
+}
+
+// --- Table Aggregation Logic ---
+function getOrderViewTable(data) {
+  const grouped = {};
+  data.forEach(row => {
+    const order_id = row.order_id || "N/A";
+    if (!grouped[order_id]) {
+      grouped[order_id] = {
+        supplier_name: row.supplier_name || "",
+        order_id,
+        product_count: 0,
+        total_cbm: 0,
+        total_weight: 0,
+        total_gmv: 0
+      };
+    }
+    grouped[order_id].product_count += 1;
+    grouped[order_id].total_cbm += parseFloat(row.calculated_cbm) || 0;
+    grouped[order_id].total_weight += parseFloat(row.calculated_weight) || 0;
+    grouped[order_id].total_gmv += getGMV(row);
+  });
+  return Object.values(grouped);
+}
+
+function getSupplierViewTable(data) {
+  const grouped = {};
+  data.forEach(row => {
+    const supplier = row.supplier_name || "N/A";
+    if (!grouped[supplier]) {
+      grouped[supplier] = {
+        supplier_name: supplier,
+        order_set: new Set(),
+        product_count: 0,
+        total_cbm: 0,
+        total_weight: 0,
+        total_gmv: 0
+      };
+    }
+    grouped[supplier].order_set.add(row.order_id);
+    grouped[supplier].product_count += 1;
+    grouped[supplier].total_cbm += parseFloat(row.calculated_cbm) || 0;
+    grouped[supplier].total_weight += parseFloat(row.calculated_weight) || 0;
+    grouped[supplier].total_gmv += getGMV(row);
+  });
+  return Object.values(grouped).map(g => ({
+    ...g,
+    order_count: g.order_set.size
+  }));
+}
+
+function getCustomerAreaViewTable(data) {
+  // Group by supplier_name, then by customer_area (use actual values, not "N/A")
+  const grouped = {};
+  data.forEach(row => {
+    const supplier = row.supplier_name || "";
+    const area = row.customer_area || "";
+    if (!grouped[supplier]) grouped[supplier] = {};
+    if (!grouped[supplier][area]) {
+      grouped[supplier][area] = {
+        supplier_name: supplier,
+        customer_area: area,
+        retailer_set: new Set(),
+        order_set: new Set(),
+        total_cbm: 0,
+        total_weight: 0,
+        total_gmv: 0
+      };
+    }
+    grouped[supplier][area].retailer_set.add(row.retailer || row.retailer_name || "");
+    grouped[supplier][area].order_set.add(row.order_id);
+    grouped[supplier][area].total_cbm += parseFloat(row.calculated_cbm) || 0;
+    grouped[supplier][area].total_weight += parseFloat(row.calculated_weight) || 0;
+    // Use the actual total_gmv column if it exists, else fallback to getGMV
+    grouped[supplier][area].total_gmv += row.total_gmv !== undefined
+      ? parseFloat(row.total_gmv) || 0
+      : getGMV(row);
+  });
+  // Flatten to array, with supplier_name merged for consecutive rows
+  const rows = [];
+  Object.keys(grouped).forEach(supplier => {
+    const areas = Object.values(grouped[supplier]);
+    areas.forEach((areaObj, idx) => {
+      rows.push({
+        supplier_name: idx === 0 ? supplier : "",
+        customer_area: areaObj.customer_area,
+        retailer_count: areaObj.retailer_set.size,
+        order_count: areaObj.order_set.size,
+        total_cbm: areaObj.total_cbm,
+        total_weight: areaObj.total_weight,
+        total_gmv: areaObj.total_gmv
+      });
+    });
+  });
+  return rows;
+}
+
+// Download helper for a table
+function downloadTableAsExcel(tableData, columns, filename) {
+  if (!tableData || !tableData.length) return;
+  const exportData = tableData.map(row => {
+    const obj = {};
+    columns.forEach(col => {
+      obj[col.label] = typeof row[col.key] === "number"
+        ? row[col.key].toFixed(col.fixed || 0)
+        : row[col.key];
+    });
+    return obj;
+  });
+  const ws = XLSXUtils.json_to_sheet(exportData);
+  const wb = XLSXUtils.book_new();
+  XLSXUtils.book_append_sheet(wb, ws, "Sheet1");
+  XLSXWriteFile(wb, filename);
 }
 
 // Column mapping helper
@@ -934,6 +1057,195 @@ const CBMCalculator = () => {
                       Showing first 10 rows. Download for full data.
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Order View Table */}
+              <div style={{ background: "#fff", borderRadius: 14, padding: 24, boxShadow: "0 2px 12px 0 rgba(0,0,0,0.04)", marginBottom: 32 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <h3 style={{ color: "#0f172a", fontWeight: 700, fontSize: 20, marginBottom: 0 }}>
+                    Order View
+                  </h3>
+                  <button
+                    onClick={() => downloadTableAsExcel(
+                      getOrderViewTable(results),
+                      [
+                        { key: "supplier_name", label: "Supplier" },
+                        { key: "order_id", label: "Order ID" },
+                        { key: "product_count", label: "Product Count" },
+                        { key: "total_cbm", label: "Total CBM", fixed: 4 },
+                        { key: "total_weight", label: "Total Weight", fixed: 2 },
+                        { key: "total_gmv", label: "Total GMV", fixed: 2 }
+                      ],
+                      "order_view.xlsx"
+                    )}
+                    style={{
+                      background: "linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)",
+                      color: "#fff",
+                      padding: "8px 18px",
+                      borderRadius: 7,
+                      fontWeight: 600,
+                      fontSize: 15,
+                      border: "none",
+                      cursor: "pointer",
+                      boxShadow: "0 2px 8px 0 rgba(37,99,235,0.08)"
+                    }}
+                  >
+                    Download Sheet
+                  </button>
+                </div>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 15, background: "#f8fafc", borderRadius: 10, overflow: "hidden" }}>
+                    <thead>
+                      <tr style={{ background: "#e0e7ef" }}>
+                        <th style={{ padding: "10px 8px" }}>Supplier</th>
+                        <th style={{ padding: "10px 8px" }}>Order ID</th>
+                        <th style={{ padding: "10px 8px" }}>Product Count</th>
+                        <th style={{ padding: "10px 8px" }}>Total CBM</th>
+                        <th style={{ padding: "10px 8px" }}>Total Weight</th>
+                        <th style={{ padding: "10px 8px" }}>Total GMV</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getOrderViewTable(results).map((row, idx) => (
+                        <tr key={idx} style={{ background: idx % 2 === 0 ? "#fff" : "#f1f5f9" }}>
+                          <td style={{ padding: "8px 8px" }}>{row.supplier_name}</td>
+                          <td style={{ padding: "8px 8px" }}>{row.order_id}</td>
+                          <td style={{ padding: "8px 8px" }}>{row.product_count}</td>
+                          <td style={{ padding: "8px 8px" }}>{row.total_cbm.toFixed(4)}</td>
+                          <td style={{ padding: "8px 8px" }}>{row.total_weight.toFixed(2)}</td>
+                          <td style={{ padding: "8px 8px" }}>{row.total_gmv.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Supplier View Table */}
+              <div style={{ background: "#fff", borderRadius: 14, padding: 24, boxShadow: "0 2px 12px 0 rgba(0,0,0,0.04)", marginBottom: 32 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <h3 style={{ color: "#0f172a", fontWeight: 700, fontSize: 20, marginBottom: 0 }}>
+                    Supplier View
+                  </h3>
+                  <button
+                    onClick={() => downloadTableAsExcel(
+                      getSupplierViewTable(results),
+                      [
+                        { key: "supplier_name", label: "Supplier" },
+                        { key: "order_count", label: "Order Count" },
+                        { key: "product_count", label: "Product Count" },
+                        { key: "total_cbm", label: "Total CBM", fixed: 4 },
+                        { key: "total_weight", label: "Total Weight", fixed: 2 },
+                        { key: "total_gmv", label: "Total GMV", fixed: 2 }
+                      ],
+                      "supplier_view.xlsx"
+                    )}
+                    style={{
+                      background: "linear-gradient(90deg, #0ea5e9 0%, #38bdf8 100%)",
+                      color: "#fff",
+                      padding: "8px 18px",
+                      borderRadius: 7,
+                      fontWeight: 600,
+                      fontSize: 15,
+                      border: "none",
+                      cursor: "pointer",
+                      boxShadow: "0 2px 8px 0 rgba(14,165,233,0.08)"
+                    }}
+                  >
+                    Download Sheet
+                  </button>
+                </div>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 15, background: "#f8fafc", borderRadius: 10, overflow: "hidden" }}>
+                    <thead>
+                      <tr style={{ background: "#e0e7ef" }}>
+                        <th style={{ padding: "10px 8px" }}>Supplier</th>
+                        <th style={{ padding: "10px 8px" }}>Order Count</th>
+                        <th style={{ padding: "10px 8px" }}>Product Count</th>
+                        <th style={{ padding: "10px 8px" }}>Total CBM</th>
+                        <th style={{ padding: "10px 8px" }}>Total Weight</th>
+                        <th style={{ padding: "10px 8px" }}>Total GMV</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getSupplierViewTable(results).map((row, idx) => (
+                        <tr key={idx} style={{ background: idx % 2 === 0 ? "#fff" : "#f1f5f9" }}>
+                          <td style={{ padding: "8px 8px" }}>{row.supplier_name}</td>
+                          <td style={{ padding: "8px 8px" }}>{row.order_count}</td>
+                          <td style={{ padding: "8px 8px" }}>{row.product_count}</td>
+                          <td style={{ padding: "8px 8px" }}>{row.total_cbm.toFixed(4)}</td>
+                          <td style={{ padding: "8px 8px" }}>{row.total_weight.toFixed(2)}</td>
+                          <td style={{ padding: "8px 8px" }}>{row.total_gmv.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Customer Area View Table */}
+              <div style={{ background: "#fff", borderRadius: 14, padding: 24, boxShadow: "0 2px 12px 0 rgba(0,0,0,0.04)", marginBottom: 32 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <h3 style={{ color: "#0f172a", fontWeight: 700, fontSize: 20, marginBottom: 0 }}>
+                    Customer Area View
+                  </h3>
+                  <button
+                    onClick={() => downloadTableAsExcel(
+                      getCustomerAreaViewTable(results),
+                      [
+                        { key: "supplier_name", label: "Supplier" },
+                        { key: "customer_area", label: "Customer Area" },
+                        { key: "retailer_count", label: "Retailer Count" },
+                        { key: "order_count", label: "Order Count" },
+                        { key: "total_cbm", label: "Total CBM", fixed: 4 },
+                        { key: "total_weight", label: "Total Weight", fixed: 2 },
+                        { key: "total_gmv", label: "Total GMV", fixed: 2 }
+                      ],
+                      "customer_area_view.xlsx"
+                    )}
+                    style={{
+                      background: "linear-gradient(90deg, #22c55e 0%, #bef264 100%)",
+                      color: "#fff",
+                      padding: "8px 18px",
+                      borderRadius: 7,
+                      fontWeight: 600,
+                      fontSize: 15,
+                      border: "none",
+                      cursor: "pointer",
+                      boxShadow: "0 2px 8px 0 rgba(34,197,94,0.08)"
+                    }}
+                  >
+                    Download Sheet
+                  </button>
+                </div>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 15, background: "#f8fafc", borderRadius: 10, overflow: "hidden" }}>
+                    <thead>
+                      <tr style={{ background: "#e0e7ef" }}>
+                        <th style={{ padding: "10px 8px" }}>Supplier</th>
+                        <th style={{ padding: "10px 8px" }}>Customer Area</th>
+                        <th style={{ padding: "10px 8px" }}>Retailer Count</th>
+                        <th style={{ padding: "10px 8px" }}>Order Count</th>
+                        <th style={{ padding: "10px 8px" }}>Total CBM</th>
+                        <th style={{ padding: "10px 8px" }}>Total Weight</th>
+                        <th style={{ padding: "10px 8px" }}>Total GMV</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getCustomerAreaViewTable(results).map((row, idx) => (
+                        <tr key={idx} style={{ background: idx % 2 === 0 ? "#fff" : "#f1f5f9" }}>
+                          <td style={{ padding: "8px 8px" }}>{row.supplier_name}</td>
+                          <td style={{ padding: "8px 8px" }}>{row.customer_area}</td>
+                          <td style={{ padding: "8px 8px" }}>{row.retailer_count}</td>
+                          <td style={{ padding: "8px 8px" }}>{row.order_count}</td>
+                          <td style={{ padding: "8px 8px" }}>{row.total_cbm.toFixed(4)}</td>
+                          <td style={{ padding: "8px 8px" }}>{row.total_weight.toFixed(2)}</td>
+                          <td style={{ padding: "8px 8px" }}>{row.total_gmv.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </>
