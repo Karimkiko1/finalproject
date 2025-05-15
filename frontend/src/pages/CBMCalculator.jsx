@@ -7,7 +7,6 @@ import autoTable from "jspdf-autotable";
 import Lottie from "lottie-react";
 import animationData from "../../../CBM.json";
 import mainAnimation from "../../../CBM_Main.json";
-import { utils as XLSXUtils, writeFile as XLSXWriteFile } from "xlsx";
 
 // Helper: fallback matching logic (exported for potential reuse)
 export function getCBMWeightAppScriptStyle(row, fallbackData) {
@@ -61,128 +60,6 @@ export function getCBMWeightAppScriptStyle(row, fallbackData) {
   }
 }
 
-// Helper for GMV (Gross Merchandise Value) calculation
-function getGMV(row) {
-  if (row.total_price) return parseFloat(row.total_price) || 0;
-  if (row.price) return parseFloat(row.price) || 0;
-  if (row.gmv) return parseFloat(row.gmv) || 0;
-  if (row.total_weight) return parseFloat(row.total_weight) * 100;
-  return 0;
-}
-
-// --- Table Aggregation Logic ---
-function getOrderViewTable(data) {
-  const grouped = {};
-  data.forEach(row => {
-    const order_id = row.order_id || "N/A";
-    if (!grouped[order_id]) {
-      grouped[order_id] = {
-        supplier_name: row.supplier_name || "",
-        order_id,
-        product_count: 0,
-        total_cbm: 0,
-        total_weight: 0,
-        total_gmv: 0
-      };
-    }
-    grouped[order_id].product_count += 1;
-    grouped[order_id].total_cbm += parseFloat(row.calculated_cbm) || 0;
-    grouped[order_id].total_weight += parseFloat(row.calculated_weight) || 0;
-    grouped[order_id].total_gmv += getGMV(row);
-  });
-  return Object.values(grouped);
-}
-
-function getSupplierViewTable(data) {
-  const grouped = {};
-  data.forEach(row => {
-    const supplier = row.supplier_name || "N/A";
-    if (!grouped[supplier]) {
-      grouped[supplier] = {
-        supplier_name: supplier,
-        order_set: new Set(),
-        product_count: 0,
-        total_cbm: 0,
-        total_weight: 0,
-        total_gmv: 0
-      };
-    }
-    grouped[supplier].order_set.add(row.order_id);
-    grouped[supplier].product_count += 1;
-    grouped[supplier].total_cbm += parseFloat(row.calculated_cbm) || 0;
-    grouped[supplier].total_weight += parseFloat(row.calculated_weight) || 0;
-    grouped[supplier].total_gmv += getGMV(row);
-  });
-  return Object.values(grouped).map(g => ({
-    ...g,
-    order_count: g.order_set.size
-  }));
-}
-
-function getCustomerAreaViewTable(data) {
-  // Group by supplier_name, then by customer_area (use actual values, not "N/A")
-  const grouped = {};
-  data.forEach(row => {
-    const supplier = row.supplier_name || "";
-    const area = row.customer_area || "";
-    if (!grouped[supplier]) grouped[supplier] = {};
-    if (!grouped[supplier][area]) {
-      grouped[supplier][area] = {
-        supplier_name: supplier,
-        customer_area: area,
-        retailer_set: new Set(),
-        order_set: new Set(),
-        total_cbm: 0,
-        total_weight: 0,
-        total_gmv: 0
-      };
-    }
-    grouped[supplier][area].retailer_set.add(row.retailer || row.retailer_name || "");
-    grouped[supplier][area].order_set.add(row.order_id);
-    grouped[supplier][area].total_cbm += parseFloat(row.calculated_cbm) || 0;
-    grouped[supplier][area].total_weight += parseFloat(row.calculated_weight) || 0;
-    // Use the actual total_gmv column if it exists, else fallback to getGMV
-    grouped[supplier][area].total_gmv += row.total_gmv !== undefined
-      ? parseFloat(row.total_gmv) || 0
-      : getGMV(row);
-  });
-  // Flatten to array, with supplier_name merged for consecutive rows
-  const rows = [];
-  Object.keys(grouped).forEach(supplier => {
-    const areas = Object.values(grouped[supplier]);
-    areas.forEach((areaObj, idx) => {
-      rows.push({
-        supplier_name: idx === 0 ? supplier : "",
-        customer_area: areaObj.customer_area,
-        retailer_count: areaObj.retailer_set.size,
-        order_count: areaObj.order_set.size,
-        total_cbm: areaObj.total_cbm,
-        total_weight: areaObj.total_weight,
-        total_gmv: areaObj.total_gmv
-      });
-    });
-  });
-  return rows;
-}
-
-// Download helper for a table
-function downloadTableAsExcel(tableData, columns, filename) {
-  if (!tableData || !tableData.length) return;
-  const exportData = tableData.map(row => {
-    const obj = {};
-    columns.forEach(col => {
-      obj[col.label] = typeof row[col.key] === "number"
-        ? row[col.key].toFixed(col.fixed || 0)
-        : row[col.key];
-    });
-    return obj;
-  });
-  const ws = XLSXUtils.json_to_sheet(exportData);
-  const wb = XLSXUtils.book_new();
-  XLSXUtils.book_append_sheet(wb, ws, "Sheet1");
-  XLSXWriteFile(wb, filename);
-}
-
 // Column mapping helper
 function mapColumns(data, requiredCols) {
   const columns = data.length > 0 ? Object.keys(data[0]) : [];
@@ -192,6 +69,77 @@ function mapColumns(data, requiredCols) {
   });
   return mapping;
 }
+
+// Helper function to export data as Excel
+const exportToExcel = (data, fileName) => {
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+  const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  saveAs(blob, `${fileName}.xlsx`);
+};
+
+// Functions to prepare data for Order View, Supplier View, and Customer Area View
+const getOrderViewTable = (results) => {
+  // Group by order_id and aggregate
+  const orderMap = results.reduce((acc, row) => {
+    const orderId = row.order_id;
+    if (!acc[orderId]) {
+      acc[orderId] = { order_id: orderId, total_cbm: 0, total_weight: 0, confidence: [] };
+    }
+    acc[orderId].total_cbm += row.calculated_cbm || 0;
+    acc[orderId].total_weight += row.calculated_weight || 0;
+    acc[orderId].confidence.push(row.cbm_confidence);
+    return acc;
+  }, {});
+  return Object.values(orderMap).map(order => ({
+    order_id: order.order_id,
+    total_cbm: order.total_cbm.toFixed(4),
+    total_weight: order.total_weight.toFixed(2),
+    avg_confidence: (order.confidence.reduce((sum, c) => sum + c, 0) / order.confidence.length).toFixed(2)
+  }));
+};
+
+const getSupplierViewTable = (results) => {
+  // Group by supplier (assuming supplier_name exists in data)
+  const supplierMap = results.reduce((acc, row) => {
+    const supplier = row.supplier_name || "Unknown";
+    if (!acc[supplier]) {
+      acc[supplier] = { supplier_name: supplier, total_cbm: 0, total_weight: 0, orders: new Set() };
+    }
+    acc[supplier].total_cbm += row.calculated_cbm || 0;
+    acc[supplier].total_weight += row.calculated_weight || 0;
+    acc[supplier].orders.add(row.order_id);
+    return acc;
+  }, {});
+  return Object.values(supplierMap).map(supplier => ({
+    supplier_name: supplier.supplier_name,
+    total_cbm: supplier.total_cbm.toFixed(4),
+    total_weight: supplier.total_weight.toFixed(2),
+    order_count: supplier.orders.size
+  }));
+};
+
+const getCustomerAreaViewTable = (results) => {
+  // Group by customer_area (assuming customer_area exists in data)
+  const areaMap = results.reduce((acc, row) => {
+    const area = row.customer_area || "Unknown";
+    if (!acc[area]) {
+      acc[area] = { customer_area: area, total_cbm: 0, total_weight: 0, orders: new Set() };
+    }
+    acc[area].total_cbm += row.calculated_cbm || 0;
+    acc[area].total_weight += row.calculated_weight || 0;
+    acc[area].orders.add(row.order_id);
+    return acc;
+  }, {});
+  return Object.values(areaMap).map(area => ({
+    customer_area: area.customer_area,
+    total_cbm: area.total_cbm.toFixed(4),
+    total_weight: area.total_weight.toFixed(2),
+    order_count: area.orders.size
+  }));
+};
 
 const CBMCalculator = () => {
   const [fallbackData, setFallbackData] = useState(null);
@@ -282,15 +230,7 @@ const CBMCalculator = () => {
       return mappedRow;
     });
 
-    // --- MATCH OLD APP LOGIC: ---
-    // 1. For each row, try to match fallback by brand_name, category, measurement_value, unit_count
-    // 2. If no match, fallback to category+measure+unit_count, then category only, else 0
-    // 3. For each row, use product_amount as quantity (default 1)
-    // 4. CBM and Weight must be valid numbers, else 0
-    // 5. For Product column, always show base_product_id if exists, else product_id
-
     const resultRows = mappedData.map(row => {
-      // Use string trim and fallback to empty string for matching
       const brand = (row.brand_name || "").toString().trim();
       const category = (row.category || "").toString().trim();
       const measure = parseFloat(row.measurement_value || 0);
@@ -331,7 +271,6 @@ const CBMCalculator = () => {
           }
         }
       }
-      // 4. No match: all 0
 
       // Quantity
       let qty = parseFloat(row.product_amount);
@@ -349,7 +288,26 @@ const CBMCalculator = () => {
     setResults(resultRows);
   };
 
-  // Download Excel handler
+  // Download handlers for views
+  const handleDownloadOrderView = () => {
+    if (!results) return;
+    const data = getOrderViewTable(results);
+    exportToExcel(data, "OrderView");
+  };
+
+  const handleDownloadSupplierView = () => {
+    if (!results) return;
+    const data = getSupplierViewTable(results);
+    exportToExcel(data, "SupplierView");
+  };
+
+  const handleDownloadCustomerAreaView = () => {
+    if (!results) return;
+    const data = getCustomerAreaViewTable(results);
+    exportToExcel(data, "CustomerAreaView");
+  };
+
+  // Download Excel handler (for Details table)
   const handleDownloadExcel = () => {
     if (!results) return;
     const ws = XLSX.utils.json_to_sheet(results);
@@ -360,7 +318,7 @@ const CBMCalculator = () => {
     saveAs(blob, "cbm_weight_results.xlsx");
   };
 
-  // Download PDF handler
+  // Download PDF handler (for Details table)
   const handleDownloadPDF = () => {
     if (!results) return;
     try {
@@ -396,12 +354,10 @@ const CBMCalculator = () => {
 
   // Summary stats
   const summary = results ? (() => {
-    // Only include rows with valid, positive CBM and Weight for totals and averages
     const validRows = results.filter(r =>
       typeof r.calculated_cbm === "number" && r.calculated_cbm >= 0 &&
       typeof r.calculated_weight === "number" && r.calculated_weight >= 0
     );
-    // Only count unique, non-empty order IDs
     const uniqueOrderIds = [...new Set(validRows.map(r => r.order_id).filter(Boolean))];
     const totalCBM = validRows.reduce((sum, r) => sum + r.calculated_cbm, 0);
     const totalWeight = validRows.reduce((sum, r) => sum + r.calculated_weight, 0);
@@ -421,17 +377,14 @@ const CBMCalculator = () => {
 
   // Defensive: never render blank page
   try {
-    // Show Lottie animation for at least 4 seconds AND until fallbackData is loaded
     useEffect(() => {
       let timer;
       if (fallbackData === null || loadingFallback) {
         setShowLottie(true);
         timer = setTimeout(() => {
-          // Only hide after 4s if fallbackData is loaded
           if (fallbackData !== null && !loadingFallback) setShowLottie(false);
         }, 4000);
       } else {
-        // fallbackData is loaded, but wait for 4s if timer is running
         setTimeout(() => setShowLottie(false), 4000);
       }
       return () => {
@@ -439,296 +392,292 @@ const CBMCalculator = () => {
       };
     }, [loadingFallback, fallbackData]);
 
-    // Only hide Lottie after 4s AND fallbackData is loaded
     if (showLottie || loadingFallback || fallbackData === null) {
       return (
-      <div style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100vh",
-        background: "linear-gradient(120deg, #f8fafc 0%, #e0e7ef 100%)"
-      }}>
-        {/* Make the animation 3x bigger */}
-        <Lottie animationData={animationData} loop={true} style={{ width: 660, height: 660 }} />
-        <div style={{ fontSize: 22, fontWeight: 600, color: "#2563eb", marginTop: 18 }}>
-        Loading Dimensions Data...
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100vh",
+          background: "linear-gradient(120deg, #f8fafc 0%, #e0e7ef 100%)"
+        }}>
+          <Lottie animationData={animationData} loop={true} style={{ width: 660, height: 660 }} />
+          <div style={{ fontSize: 22, fontWeight: 600, color: "#2563eb", marginTop: 18 }}>
+            Loading Dimensions Data...
+          </div>
         </div>
-      </div>
       );
     }
 
     return (
       <>
-      <div
-        style={{
-        padding: '32px',
-        maxWidth: 1200,
-        margin: '0 auto',
-        fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
-        background: 'linear-gradient(120deg, #f8fafc 0%, #e0e7ef 100%)',
-        minHeight: '100vh',
-        borderRadius: 18,
-        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.12)'
-        }}
-      >
-        {/* Header */}
         <div
-        style={{
-          background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)',
-          borderRadius: 14,
-          padding: '32px 24px 20px 24px',
-          marginBottom: 32,
-          color: '#fff',
-          boxShadow: '0 4px 24px 0 rgba(37,99,235,0.08)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 18,
-          position: "relative"
-        }}
-        >
-        <img
-          src="https://cdn-icons-png.flaticon.com/512/2921/2921222.png"
-          alt="CBM"
           style={{
-          width: 56,
-          height: 56,
-          marginRight: 18,
-          borderRadius: 8,
-          background: '#fff'
-          }}
-        />
-        <div>
-          <h1 style={{ margin: 0, fontWeight: 700, fontSize: 32, letterSpacing: '-1px' }}>
-          CBM & Weight Calculator
-          </h1>
-          <div style={{ fontSize: 17, opacity: 0.92, marginTop: 4 }}>
-          Upload your runsheet and get instant CBM & Weight calculations with confidence levels.
-          </div>
-        </div>
-        {/* Main Lottie Animation on the right */}
-        <div style={{ marginLeft: "auto", marginRight: 0, minWidth: 90 }}>
-          <Lottie animationData={mainAnimation} loop={true} style={{ width: 90, height: 90 }} />
-        </div>
-        </div>
-
-        {/* Upload Button - Always on top */}
-        <div
-        style={{
-          background: '#fff',
-          borderRadius: 14,
-          padding: "18px 28px",
-          boxShadow: '0 2px 12px 0 rgba(0,0,0,0.04)',
-          marginBottom: 28,
-          display: "flex",
-          alignItems: "center",
-          gap: 18,
-          justifyContent: "flex-start",
-          position: "sticky",
-          top: 0,
-          zIndex: 10
-        }}
-        >
-        <label
-          htmlFor="cbm-upload"
-          style={{
-          background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)',
-          color: '#fff',
-          padding: '12px 28px',
-          borderRadius: 8,
-          fontWeight: 600,
-          fontSize: 16,
-          cursor: 'pointer',
-          boxShadow: '0 2px 8px 0 rgba(37,99,235,0.08)'
+            padding: '32px',
+            maxWidth: 1200,
+            margin: '0 auto',
+            fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
+            background: 'linear-gradient(120deg, #f8fafc 0%, #e0e7ef 100%)',
+            minHeight: '100vh',
+            borderRadius: 18,
+            boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.12)'
           }}
         >
-          Upload Runsheet
-          <input
-          id="cbm-upload"
-          type="file"
-          accept=".xlsx,.xls,.csv"
-          onChange={handleFileUpload}
-          style={{ display: 'none' }}
-          />
-        </label>
-        {runsheetData.length > 0 && (
-          <span style={{ color: '#2563eb', fontWeight: 500, fontSize: 15 }}>
-          {runsheetData.length} rows loaded
-          </span>
-        )}
-        {!fallbackData && (
-          <span style={{ color: '#e11d48', fontWeight: 500, fontSize: 15 }}>
-          Fallback data not loaded
-          </span>
-        )}
-        </div>
-
-        {/* Show fixed summary if no runsheet data */}
-        {!runsheetData.length && !loadingFallback && (
-        <div style={{
-          background: "#fff",
-          borderRadius: 18,
-          padding: "36px 32px 24px 32px",
-          boxShadow: "0 2px 12px 0 rgba(0,0,0,0.04)",
-          marginBottom: 32,
-          marginTop: 24,
-          width: "100%",
-          minHeight: 420,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          position: "relative",
-          maxWidth: 1200, // <--- Updated value to make it wider.
-          marginLeft: "auto",
-          marginRight: "auto",
-          boxSizing: "border-box",
-          overflow: "hidden"
-        }}>
-          <h2 style={{ 
-          color: "#2563eb", 
-          fontWeight: 700, 
-          marginBottom: 28, 
-          fontSize: 28, 
-          textAlign: "center", 
-          width: "100%" 
-          }}>
-          Current Live Orders Summary
-          </h2>
-          <div style={{
-          display: "flex",
-          gap: 24,
-          flexWrap: "wrap",
-          justifyContent: "center",
-          marginBottom: 18,
-          width: "100%"
-          }}>
-          <div style={{
-            background: "linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)",
-            color: "#fff",
-            borderRadius: 12,
-            padding: "22px 18px",
-            minWidth: 180,
-            textAlign: "center",
-            flex: 1,
-            margin: "0 12px"
-          }}>
-            <div style={{ fontSize: 15, opacity: 0.9 }}>Total Orders</div>
-            <div style={{ fontWeight: 700, fontSize: 28 }}>{fixedSummary.totalOrders}</div>
-          </div>
-          <div style={{
-            background: "linear-gradient(90deg, #0ea5e9 0%, #38bdf8 100%)",
-            color: "#fff",
-            borderRadius: 12,
-            padding: "22px 18px",
-            minWidth: 180,
-            textAlign: "center",
-            flex: 1,
-            margin: "0 12px"
-          }}>
-            <div style={{ fontSize: 15, opacity: 0.9 }}>Total CBM</div>
-            <div style={{ fontWeight: 700, fontSize: 28 }}>{fixedSummary.totalCBM}</div>
-          </div>
-          <div style={{
-            background: "linear-gradient(90deg, #22c55e 0%, #bef264 100%)",
-            color: "#fff",
-            borderRadius: 12,
-            padding: "22px 18px",
-            minWidth: 180,
-            textAlign: "center",
-            flex: 1,
-            margin: "0 12px"
-          }}>
-            <div style={{ fontSize: 15, opacity: 0.9 }}>Total Weight</div>
-            <div style={{ fontWeight: 700, fontSize: 28 }}>{fixedSummary.totalWeight} kg</div>
-          </div>
-          <div style={{
-            background: "linear-gradient(90deg, #f59e42 0%, #fbbf24 100%)",
-            color: "#fff",
-            borderRadius: 12,
-            padding: "22px 18px",
-            minWidth: 180,
-            textAlign: "center",
-            flex: 1,
-            margin: "0 12px"
-          }}>
-            <div style={{ fontSize: 15, opacity: 0.9 }}>Matched Products</div>
-            <div style={{ fontWeight: 700, fontSize: 28 }}>{fixedSummary.matched}</div>
-          </div>
-          <div style={{
-            background: "linear-gradient(90deg, #a855f7 0%, #f472b6 100%)",
-            color: "#fff",
-            borderRadius: 12,
-            padding: "22px 18px",
-            minWidth: 180,
-            textAlign: "center",
-            flex: 1,
-            margin: "0 12px"
-          }}>
-            <div style={{ fontSize: 15, opacity: 0.9 }}>Unique Products</div>
-            <div style={{ fontWeight: 700, fontSize: 28 }}>{fixedSummary.uniqueProducts}</div>
-          </div>
-          </div>
-          <div style={{
-          display: "flex",
-          gap: 24,
-          flexWrap: "wrap",
-          justifyContent: "center",
-          marginBottom: 18,
-          width: "100%"
-          }}>
-          <div style={{
-            background: "#f1f5f9",
-            borderRadius: 10,
-            padding: "18px 18px",
-            minWidth: 180,
-            textAlign: "center",
-            flex: 1,
-            margin: "0 12px"
-          }}>
-            <div style={{ fontSize: 15, color: "#64748b" }}>Avg CBM/Order</div>
-            <div style={{ fontWeight: 700, fontSize: 20 }}>{fixedSummary.avgCBM}</div>
-          </div>
-          <div style={{
-            background: "#f1f5f9",
-            borderRadius: 10,
-            padding: "18px 18px",
-            minWidth: 180,
-            textAlign: "center",
-            flex: 1,
-            margin: "0 12px"
-          }}>
-            <div style={{ fontSize: 15, color: "#64748b" }}>Avg Weight/Order</div>
-            <div style={{ fontWeight: 700, fontSize: 20 }}>{fixedSummary.avgWeight} kg</div>
-          </div>
-          </div>
-          <div style={{ marginTop: 18, width: "100%", textAlign: "center" }}>
-          <div style={{ fontWeight: 600, color: "#2563eb", marginBottom: 6, fontSize: 16 }}>
-            Top Categories
-          </div>
-          <div style={{ 
-            display: "flex", 
-            gap: 12, 
-            justifyContent: "center", 
-            flexWrap: "wrap" 
-          }}>
-            {fixedSummary.topCategories.map((cat, idx) => (
-            <div key={cat.category} style={{
-              background: "#e0e7ef",
-              borderRadius: 8,
-              padding: "10px 18px",
-              fontWeight: 600,
-              color: "#0f172a",
-              fontSize: 15,
-              margin: "0 6px 12px 6px"
-            }}>
-              {idx + 1}. {cat.category} <span style={{ color: "#64748b", fontWeight: 400 }}> ({cat.count})</span>
+          {/* Header */}
+          <div
+            style={{
+              background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)',
+              borderRadius: 14,
+              padding: '32px 24px 20px 24px',
+              marginBottom: 32,
+              color: '#fff',
+              boxShadow: '0 4px 24px 0 rgba(37,99,235,0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 18,
+              position: "relative"
+            }}
+          >
+            <img
+              src="https://cdn-icons-png.flaticon.com/512/2921/2921222.png"
+              alt="CBM"
+              style={{
+                width: 56,
+                height: 56,
+                marginRight: 18,
+                borderRadius: 8,
+                background: '#fff'
+              }}
+            />
+            <div>
+              <h1 style={{ margin: 0, fontWeight: 700, fontSize: 32, letterSpacing: '-1px' }}>
+                CBM & Weight Calculator
+              </h1>
+              <div style={{ fontSize: 17, opacity: 0.92, marginTop: 4 }}>
+                Upload your runsheet and get instant CBM & Weight calculations with confidence levels.
+              </div>
             </div>
-            ))}
+            <div style={{ marginLeft: "auto", marginRight: 0, minWidth: 90 }}>
+              <Lottie animationData={mainAnimation} loop={true} style={{ width: 90, height: 90 }} />
+            </div>
           </div>
+
+          {/* Upload Button */}
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 14,
+              padding: "18px 28px",
+              boxShadow: '0 2px 12px 0 rgba(0,0,0,0.04)',
+              marginBottom: 28,
+              display: "flex",
+              alignItems: "center",
+              gap: 18,
+              justifyContent: "flex-start",
+              position: "sticky",
+              top: 0,
+              zIndex: 10
+            }}
+          >
+            <label
+              htmlFor="cbm-upload"
+              style={{
+                background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)',
+                color: '#fff',
+                padding: '12px 28px',
+                borderRadius: 8,
+                fontWeight: 600,
+                fontSize: 16,
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px 0 rgba(37,99,235,0.08)'
+              }}
+            >
+              Upload Runsheet
+              <input
+                id="cbm-upload"
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleFileUpload}
+                style={{ display: 'none' }}
+              />
+            </label>
+            {runsheetData.length > 0 && (
+              <span style={{ color: '#2563eb', fontWeight: 500, fontSize: 15 }}>
+                {runsheetData.length} rows loaded
+              </span>
+            )}
+            {!fallbackData && (
+              <span style={{ color: '#e11d48', fontWeight: 500, fontSize: 15 }}>
+                Fallback data not loaded
+              </span>
+            )}
           </div>
-          {/* Large Lottie Animation on the right */}
+
+          {/* Fixed Summary */}
+          {!runsheetData.length && !loadingFallback && (
+            <div style={{
+              background: "#fff",
+              borderRadius: 18,
+              padding: "36px 32px 24px 32px",
+              boxShadow: "0 2px 12px 0 rgba(0,0,0,0.04)",
+              marginBottom: 32,
+              marginTop: 24,
+              width: "100%",
+              minHeight: 420,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              position: "relative",
+              maxWidth: 1200,
+              marginLeft: "auto",
+              marginRight: "auto",
+              boxSizing: "border-box",
+              overflow: "hidden"
+            }}>
+              <h2 style={{ 
+                color: "#2563eb", 
+                fontWeight: 700, 
+                marginBottom: 28, 
+                fontSize: 28, 
+                textAlign: "center", 
+                width: "100%" 
+              }}>
+                Current Live Orders Summary
+              </h2>
+              <div style={{
+                display: "flex",
+                gap: 24,
+                flexWrap: "wrap",
+                justifyContent: "center",
+                marginBottom: 18,
+                width: "100%"
+              }}>
+                <div style={{
+                  background: "linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)",
+                  color: "#fff",
+                  borderRadius: 12,
+                  padding: "22px 18px",
+                  minWidth: 180,
+                  textAlign: "center",
+                  flex: 1,
+                  margin: "0 12px"
+                }}>
+                  <div style={{ fontSize: 15, opacity: 0.9 }}>Total Orders</div>
+                  <div style={{ fontWeight: 700, fontSize: 28 }}>{fixedSummary.totalOrders}</div>
+                </div>
+                <div style={{
+                  background: "linear-gradient(90deg, #0ea5e9 0%, #38bdf8 100%)",
+                  color: "#fff",
+                  borderRadius: 12,
+                  padding: "22px 18px",
+                  minWidth: 180,
+                  textAlign: "center",
+                  flex: 1,
+                  margin: "0 12px"
+                }}>
+                  <div style={{ fontSize: 15, opacity: 0.9 }}>Total CBM</div>
+                  <div style={{ fontWeight: 700, fontSize: 28 }}>{fixedSummary.totalCBM}</div>
+                </div>
+                <div style={{
+                  background: "linear-gradient(90deg, #22c55e 0%, #bef264 100%)",
+                  color: "#fff",
+                  borderRadius: 12,
+                  padding: "22px 18px",
+                  minWidth: 180,
+                  textAlign: "center",
+                  flex: 1,
+                  margin: "0 12px"
+                }}>
+                  <div style={{ fontSize: 15, opacity: 0.9 }}>Total Weight</div>
+                  <div style={{ fontWeight: 700, fontSize: 28 }}>{fixedSummary.totalWeight} kg</div>
+                </div>
+                <div style={{
+                  background: "linear-gradient(90deg, #f59e42 0%, #fbbf24 100%)",
+                  color: "#fff",
+                  borderRadius: 12,
+                  padding: "22px 18px",
+                  minWidth: 180,
+                  textAlign: "center",
+                  flex: 1,
+                  margin: "0 12px"
+                }}>
+                  <div style={{ fontSize: 15, opacity: 0.9 }}>Matched Products</div>
+                  <div style={{ fontWeight: 700, fontSize: 28 }}>{fixedSummary.matched}</div>
+                </div>
+                <div style={{
+                  background: "linear-gradient(90deg, #a855f7 0%, #f472b6 100%)",
+                  color: "#fff",
+                  borderRadius: 12,
+                  padding: "22px 18px",
+                  minWidth: 180,
+                  textAlign: "center",
+                  flex: 1,
+                  margin: "0 12px"
+                }}>
+                  <div style={{ fontSize: 15, opacity: 0.9 }}>Unique Products</div>
+                  <div style={{ fontWeight: 700, fontSize: 28 }}>{fixedSummary.uniqueProducts}</div>
+                </div>
+              </div>
+              <div style={{
+                display: "flex",
+                gap: 24,
+                flexWrap: "wrap",
+                justifyContent: "center",
+                marginBottom: 18,
+                width: "100%"
+              }}>
+                <div style={{
+                  background: "#f1f5f9",
+                  borderRadius: 10,
+                  padding: "18px 18px",
+                  minWidth: 180,
+                  textAlign: "center",
+                  flex: 1,
+                  margin: "0 12px"
+                }}>
+                  <div style={{ fontSize: 15, color: "#64748b" }}>Avg CBM/Order</div>
+                  <div style={{ fontWeight: 700, fontSize: 20 }}>{fixedSummary.avgCBM}</div>
+                </div>
+                <div style={{
+                  background: "#f1f5f9",
+                  borderRadius: 10,
+                  padding: "18px 18px",
+                  minWidth: 180,
+                  textAlign: "center",
+                  flex: 1,
+                  margin: "0 12px"
+                }}>
+                  <div style={{ fontSize: 15, color: "#64748b" }}>Avg Weight/Order</div>
+                  <div style={{ fontWeight: 700, fontSize: 20 }}>{fixedSummary.avgWeight} kg</div>
+                </div>
+              </div>
+              <div style={{ marginTop: 18, width: "100%", textAlign: "center" }}>
+                <div style={{ fontWeight: 600, color: "#2563eb", marginBottom: 6, fontSize: 16 }}>
+                  Top Categories
+                </div>
+                <div style={{ 
+                  display: "flex", 
+                  gap: 12, 
+                  justifyContent: "center", 
+                  flexWrap: "wrap" 
+                }}>
+                  {fixedSummary.topCategories.map((cat, idx) => (
+                    <div key={cat.category} style={{
+                      background: "#e0e7ef",
+                      borderRadius: 8,
+                      padding: "10px 18px",
+                      fontWeight: 600,
+                      color: "#0f172a",
+                      fontSize: 15,
+                      margin: "0 6px 12px 6px"
+                    }}>
+                      {idx + 1}. {cat.category} <span style={{ color: "#64748b", fontWeight: 400 }}> ({cat.count})</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <div style={{
                 flex: 1,
                 display: "flex",
@@ -752,7 +701,6 @@ const CBMCalculator = () => {
               marginBottom: 32
             }}
           >
-            {/* Column Mapping */}
             {runsheetData.length > 0 && missingCols.length > 0 && (
               <div style={{ marginTop: 18 }}>
                 <h3 style={{ color: '#0f172a', fontWeight: 600, fontSize: 18, marginBottom: 10 }}>
@@ -802,7 +750,6 @@ const CBMCalculator = () => {
               </div>
             )}
 
-            {/* Calculate Button */}
             {runsheetData.length > 0 && missingCols.length === 0 && (
               <button
                 onClick={calculate}
@@ -827,7 +774,6 @@ const CBMCalculator = () => {
           {/* Result Summary */}
           {results && (
             <>
-              {/* Summary Cards */}
               <div
                 style={{
                   display: "flex",
@@ -901,7 +847,6 @@ const CBMCalculator = () => {
                   <div>{summary.uniqueOrders}</div>
                 </div>
               </div>
-              {/* Averages */}
               <div
                 style={{
                   display: "flex",
@@ -957,7 +902,7 @@ const CBMCalculator = () => {
                   <h3 style={{ color: "#0f172a", fontWeight: 700, fontSize: 20, marginBottom: 0 }}>
                     Details (First 10 Rows)
                   </h3>
-                  <div style={{ display: "flex", gap: 12 }}>
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                     <button
                       onClick={handleDownloadExcel}
                       style={{
@@ -1058,200 +1003,61 @@ const CBMCalculator = () => {
                     </div>
                   )}
                 </div>
-              </div>
-
-              {/* Order View Table */}
-              <div style={{ background: "#fff", borderRadius: 14, padding: 24, boxShadow: "0 2px 12px 0 rgba(0,0,0,0.04)", marginBottom: 32 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <h3 style={{ color: "#0f172a", fontWeight: 700, fontSize: 20, marginBottom: 0 }}>
-                    Order View
-                  </h3>
+                {/* Download Buttons for Additional Views */}
+                <div style={{ marginTop: 20, display: "flex", gap: 12, flexWrap: "wrap" }}>
                   <button
-                    onClick={() => downloadTableAsExcel(
-                      getOrderViewTable(results),
-                      [
-                        { key: "supplier_name", label: "Supplier" },
-                        { key: "order_id", label: "Order ID" },
-                        { key: "product_count", label: "Product Count" },
-                        { key: "total_cbm", label: "Total CBM", fixed: 4 },
-                        { key: "total_weight", label: "Total Weight", fixed: 2 },
-                        { key: "total_gmv", label: "Total GMV", fixed: 2 }
-                      ],
-                      "order_view.xlsx"
-                    )}
+                    onClick={handleDownloadOrderView}
                     style={{
-                      background: "linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)",
-                      color: "#fff",
-                      padding: "8px 18px",
+                      padding: "8px 16px",
+                      background: "linear-gradient(90deg, #4CAF50 0%, #81C784 100%)",
+                      color: "white",
+                      border: "none",
                       borderRadius: 7,
+                      cursor: "pointer",
                       fontWeight: 600,
                       fontSize: 15,
-                      border: "none",
-                      cursor: "pointer",
-                      boxShadow: "0 2px 8px 0 rgba(37,99,235,0.08)"
+                      boxShadow: "0 2px 8px 0 rgba(76,175,80,0.08)"
                     }}
                   >
-                    Download Sheet
+                    Download Order View
                   </button>
-                </div>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 15, background: "#f8fafc", borderRadius: 10, overflow: "hidden" }}>
-                    <thead>
-                      <tr style={{ background: "#e0e7ef" }}>
-                        <th style={{ padding: "10px 8px" }}>Supplier</th>
-                        <th style={{ padding: "10px 8px" }}>Order ID</th>
-                        <th style={{ padding: "10px 8px" }}>Product Count</th>
-                        <th style={{ padding: "10px 8px" }}>Total CBM</th>
-                        <th style={{ padding: "10px 8px" }}>Total Weight</th>
-                        <th style={{ padding: "10px 8px" }}>Total GMV</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {getOrderViewTable(results).map((row, idx) => (
-                        <tr key={idx} style={{ background: idx % 2 === 0 ? "#fff" : "#f1f5f9" }}>
-                          <td style={{ padding: "8px 8px" }}>{row.supplier_name}</td>
-                          <td style={{ padding: "8px 8px" }}>{row.order_id}</td>
-                          <td style={{ padding: "8px 8px" }}>{row.product_count}</td>
-                          <td style={{ padding: "8px 8px" }}>{row.total_cbm.toFixed(4)}</td>
-                          <td style={{ padding: "8px 8px" }}>{row.total_weight.toFixed(2)}</td>
-                          <td style={{ padding: "8px 8px" }}>{row.total_gmv.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Supplier View Table */}
-              <div style={{ background: "#fff", borderRadius: 14, padding: 24, boxShadow: "0 2px 12px 0 rgba(0,0,0,0.04)", marginBottom: 32 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <h3 style={{ color: "#0f172a", fontWeight: 700, fontSize: 20, marginBottom: 0 }}>
-                    Supplier View
-                  </h3>
                   <button
-                    onClick={() => downloadTableAsExcel(
-                      getSupplierViewTable(results),
-                      [
-                        { key: "supplier_name", label: "Supplier" },
-                        { key: "order_count", label: "Order Count" },
-                        { key: "product_count", label: "Product Count" },
-                        { key: "total_cbm", label: "Total CBM", fixed: 4 },
-                        { key: "total_weight", label: "Total Weight", fixed: 2 },
-                        { key: "total_gmv", label: "Total GMV", fixed: 2 }
-                      ],
-                      "supplier_view.xlsx"
-                    )}
+                    onClick={handleDownloadSupplierView}
                     style={{
-                      background: "linear-gradient(90deg, #0ea5e9 0%, #38bdf8 100%)",
-                      color: "#fff",
-                      padding: "8px 18px",
+                      padding: "8px 16px",
+                      background: "linear-gradient(90deg, #2196F3 0%, #42A5F5 100%)",
+                      color: "white",
+                      border: "none",
                       borderRadius: 7,
+                      cursor: "pointer",
                       fontWeight: 600,
                       fontSize: 15,
-                      border: "none",
-                      cursor: "pointer",
-                      boxShadow: "0 2px 8px 0 rgba(14,165,233,0.08)"
+                      boxShadow: "0 2px 8px 0 rgba(33,150,243,0.08)"
                     }}
                   >
-                    Download Sheet
+                    Download Supplier View
                   </button>
-                </div>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 15, background: "#f8fafc", borderRadius: 10, overflow: "hidden" }}>
-                    <thead>
-                      <tr style={{ background: "#e0e7ef" }}>
-                        <th style={{ padding: "10px 8px" }}>Supplier</th>
-                        <th style={{ padding: "10px 8px" }}>Order Count</th>
-                        <th style={{ padding: "10px 8px" }}>Product Count</th>
-                        <th style={{ padding: "10px 8px" }}>Total CBM</th>
-                        <th style={{ padding: "10px 8px" }}>Total Weight</th>
-                        <th style={{ padding: "10px 8px" }}>Total GMV</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {getSupplierViewTable(results).map((row, idx) => (
-                        <tr key={idx} style={{ background: idx % 2 === 0 ? "#fff" : "#f1f5f9" }}>
-                          <td style={{ padding: "8px 8px" }}>{row.supplier_name}</td>
-                          <td style={{ padding: "8px 8px" }}>{row.order_count}</td>
-                          <td style={{ padding: "8px 8px" }}>{row.product_count}</td>
-                          <td style={{ padding: "8px 8px" }}>{row.total_cbm.toFixed(4)}</td>
-                          <td style={{ padding: "8px 8px" }}>{row.total_weight.toFixed(2)}</td>
-                          <td style={{ padding: "8px 8px" }}>{row.total_gmv.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Customer Area View Table */}
-              <div style={{ background: "#fff", borderRadius: 14, padding: 24, boxShadow: "0 2px 12px 0 rgba(0,0,0,0.04)", marginBottom: 32 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <h3 style={{ color: "#0f172a", fontWeight: 700, fontSize: 20, marginBottom: 0 }}>
-                    Customer Area View
-                  </h3>
                   <button
-                    onClick={() => downloadTableAsExcel(
-                      getCustomerAreaViewTable(results),
-                      [
-                        { key: "supplier_name", label: "Supplier" },
-                        { key: "customer_area", label: "Customer Area" },
-                        { key: "retailer_count", label: "Retailer Count" },
-                        { key: "order_count", label: "Order Count" },
-                        { key: "total_cbm", label: "Total CBM", fixed: 4 },
-                        { key: "total_weight", label: "Total Weight", fixed: 2 },
-                        { key: "total_gmv", label: "Total GMV", fixed: 2 }
-                      ],
-                      "customer_area_view.xlsx"
-                    )}
+                    onClick={handleDownloadCustomerAreaView}
                     style={{
-                      background: "linear-gradient(90deg, #22c55e 0%, #bef264 100%)",
-                      color: "#fff",
-                      padding: "8px 18px",
+                      padding: "8px 16px",
+                      background: "linear-gradient(90deg, #9C27B0 0%, #AB47BC 100%)",
+                      color: "white",
+                      border: "none",
                       borderRadius: 7,
+                      cursor: "pointer",
                       fontWeight: 600,
                       fontSize: 15,
-                      border: "none",
-                      cursor: "pointer",
-                      boxShadow: "0 2px 8px 0 rgba(34,197,94,0.08)"
+                      boxShadow: "0 2px 8px 0 rgba(156,39,176,0.08)"
                     }}
                   >
-                    Download Sheet
+                    Download Customer Area View
                   </button>
-                </div>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 15, background: "#f8fafc", borderRadius: 10, overflow: "hidden" }}>
-                    <thead>
-                      <tr style={{ background: "#e0e7ef" }}>
-                        <th style={{ padding: "10px 8px" }}>Supplier</th>
-                        <th style={{ padding: "10px 8px" }}>Customer Area</th>
-                        <th style={{ padding: "10px 8px" }}>Retailer Count</th>
-                        <th style={{ padding: "10px 8px" }}>Order Count</th>
-                        <th style={{ padding: "10px 8px" }}>Total CBM</th>
-                        <th style={{ padding: "10px 8px" }}>Total Weight</th>
-                        <th style={{ padding: "10px 8px" }}>Total GMV</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {getCustomerAreaViewTable(results).map((row, idx) => (
-                        <tr key={idx} style={{ background: idx % 2 === 0 ? "#fff" : "#f1f5f9" }}>
-                          <td style={{ padding: "8px 8px" }}>{row.supplier_name}</td>
-                          <td style={{ padding: "8px 8px" }}>{row.customer_area}</td>
-                          <td style={{ padding: "8px 8px" }}>{row.retailer_count}</td>
-                          <td style={{ padding: "8px 8px" }}>{row.order_count}</td>
-                          <td style={{ padding: "8px 8px" }}>{row.total_cbm.toFixed(4)}</td>
-                          <td style={{ padding: "8px 8px" }}>{row.total_weight.toFixed(2)}</td>
-                          <td style={{ padding: "8px 8px" }}>{row.total_gmv.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
                 </div>
               </div>
             </>
           )}
 
-          {/* Footer Note */}
           <div style={{ marginTop: 32, textAlign: 'center', color: '#64748b', fontSize: 15 }}>
             <span>
               Need help? See the <b>How to use</b> instructions in the sidebar or contact support.
@@ -1261,7 +1067,6 @@ const CBMCalculator = () => {
       </>
     );
   } catch (e) {
-    // Catch any render errors and show a visible error
     return (
       <div style={{ padding: 32, color: "#b91c1c", fontWeight: 600 }}>
         Unexpected error: {e.message}
@@ -1272,5 +1077,3 @@ const CBMCalculator = () => {
 };
 
 export default CBMCalculator;
-
-
