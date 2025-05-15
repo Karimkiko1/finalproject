@@ -56,3 +56,22 @@ export const loadSheetData = async (sheetName) => {
     return obj;
   });
 };
+
+/**
+ * Update a range of values in a Google Sheet.
+ * @param {string} sheetName - The sheet/tab name (e.g. 'Runsheet')
+ * @param {string} range - The A1 notation range (e.g. 'C2:D100')
+ * @param {Array<Array<any>>} values - 2D array of values to write
+ * @returns {Promise<any>} - API response
+ */
+export const updateSheetValues = async (sheetName, range, values) => {
+  await initGoogleAPI();
+  const fullRange = `${sheetName}!${range}`;
+  const response = await window.gapi.client.sheets.spreadsheets.values.update({
+    spreadsheetId: SPREADSHEET_ID,
+    range: fullRange,
+    valueInputOption: 'USER_ENTERED',
+    resource: { values },
+  });
+  return response;
+};
