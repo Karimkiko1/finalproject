@@ -4,8 +4,6 @@
   "private": true,
   "dependencies": {
     "@babel/core": "^7.27.1",
-    "@babel/preset-env": "^7.27.2",
-    "@babel/preset-react": "^7.27.1",
     "@flags-sdk/statsig": "^0.2.2",
     "@mui/material": "^5.15.13",
     "@netlify/plugin-nextjs": "^5.11.1",
@@ -14,7 +12,6 @@
     "@types/gapi.client.sheets": "^4.0.20201031",
     "assert": "^2.1.0",
     "axios": "^1.9.0",
-    "babel-loader": "^10.0.0",
     "browserify-zlib": "^0.2.0",
     "buffer": "^6.0.3",
     "chart.js": "^4.4.9",

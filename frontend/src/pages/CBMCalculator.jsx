@@ -226,50 +226,202 @@ const CBMCalculator = () => {
     setResults(resultRows);
   };
 
-  // Download Excel handler
-  const handleDownloadExcel = () => {
-    if (!results) return;
-    const ws = XLSX.utils.json_to_sheet(results);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Results");
-    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    const blob = new Blob([wbout], { type: "application/octet-stream" });
-    saveAs(blob, "cbm_weight_results.xlsx");
+const handleDownloadExcel = () => {
+  if (!results) return;
+
+  const XLSX = require("xlsx");
+
+  // Helper: group by key
+  const groupBy = (array, keys) => {
+    return array.reduce((acc, row) => {
+      const groupKey = keys.map(k => row[k]).join("||");
+      if (!acc[groupKey]) acc[groupKey] = [];
+      acc[groupKey].push(row);
+      return acc;
+    }, {});
   };
 
-  // Download PDF handler
-  const handleDownloadPDF = () => {
-    if (!results) return;
-    try {
-      const doc = new jsPDF();
-      doc.setFontSize(14);
-      doc.text("CBM & Weight Calculation Results", 14, 16);
-      const columns = [
+  // Sheet 1: Order View
+  const orderGroups = groupBy(results, ["order_id"]);
+  const orderSheet = Object.entries(orderGroups).map(([key, rows]) => {
+    const first = rows[0];
+    return {
+      supplier_name: first.supplier_name,
+      order_id: first.order_id,
+      product_count: rows.length,
+      total_cbm: rows.reduce((sum, r) => sum + (r.calculated_cbm || 0), 0),
+      total_weight: rows.reduce((sum, r) => sum + (r.calculated_weight || 0), 0),
+      total_gmv: rows.reduce((sum, r) => sum + (r.total_gmv || 0), 0),
+    };
+  });
+
+  // Sheet 2: Supplier Summary
+  const supplierGroups = groupBy(results, ["supplier_name"]);
+  const supplierSheet = Object.entries(supplierGroups).map(([key, rows]) => {
+    const uniqueOrders = new Set(rows.map(r => r.order_id));
+    return {
+      supplier_name: key,
+      order_count: uniqueOrders.size,
+      product_count: rows.length,
+      total_cbm: rows.reduce((sum, r) => sum + (r.calculated_cbm || 0), 0),
+      total_weight: rows.reduce((sum, r) => sum + (r.calculated_weight || 0), 0),
+      total_gmv: rows.reduce((sum, r) => sum + (r.total_gmv || 0), 0),
+    };
+  });
+
+  // Sheet 3: Customer Area View (group by supplier_name + customer_area)
+  const areaGroups = groupBy(results, ["supplier_name", "customer_area"]);
+  const areaSheet = Object.entries(areaGroups).map(([key, rows]) => {
+    const [supplier_name, customer_area] = key.split("||");
+    const uniqueRetailers = new Set(rows.map(r => r.retailer_id));
+    const uniqueOrders = new Set(rows.map(r => r.order_id));
+    return {
+      supplier_name,
+      customer_area,
+      area_rows: rows.length,
+      retailer_count: uniqueRetailers.size,
+      order_count: uniqueOrders.size,
+      total_cbm: rows.reduce((sum, r) => sum + (r.calculated_cbm || 0), 0),
+      total_weight: rows.reduce((sum, r) => sum + (r.calculated_weight || 0), 0),
+      total_gmv: rows.reduce((sum, r) => sum + (r.total_gmv || 0), 0),
+    };
+  });
+
+  // Create workbook
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(orderSheet), "Order View");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(supplierSheet), "Supplier Summary");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(areaSheet), "Customer Area View");
+
+  // Save
+  const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  const blob = new Blob([wbout], { type: "application/octet-stream" });
+  saveAs(blob, "cbm_summary_tables.xlsx");
+};
+
+const handleDownloadPDF = () => {
+  if (!results) return;
+
+  try {
+    const doc = new jsPDF();
+
+    const groupBy = (array, keys) => {
+      return array.reduce((acc, row) => {
+        const groupKey = keys.map(k => row[k]).join("||");
+        if (!acc[groupKey]) acc[groupKey] = [];
+        acc[groupKey].push(row);
+        return acc;
+      }, {});
+    };
+
+    // ---------- Sheet 1: Order View ----------
+    const orderGroups = groupBy(results, ["order_id"]);
+    const orderSheet = Object.entries(orderGroups).map(([key, rows]) => {
+      const first = rows[0];
+      return {
+        supplier_name: first.supplier_name,
+        order_id: first.order_id,
+        product_count: rows.length,
+        total_cbm: rows.reduce((sum, r) => sum + (r.calculated_cbm || 0), 0).toFixed(4),
+        total_weight: rows.reduce((sum, r) => sum + (r.calculated_weight || 0), 0).toFixed(2),
+        total_gmv: rows.reduce((sum, r) => sum + (r.total_gmv || 0), 0).toFixed(2),
+      };
+    });
+
+    doc.setFontSize(16);
+    doc.text("Order View Summary", 14, 16);
+    autoTable(doc, {
+      startY: 22,
+      columns: [
+        { header: "Supplier", dataKey: "supplier_name" },
         { header: "Order ID", dataKey: "order_id" },
-        { header: "Product", dataKey: "base_product_id" },
-        { header: "CBM", dataKey: "calculated_cbm" },
-        { header: "Weight", dataKey: "calculated_weight" },
-        { header: "Confidence", dataKey: "cbm_confidence" }
-      ];
-      const rows = results.map(row => ({
-        order_id: row.order_id,
-        base_product_id: row.base_product_id ?? row.product_id ?? "",
-        calculated_cbm: (row.calculated_cbm || 0).toFixed(4),
-        calculated_weight: (row.calculated_weight || 0).toFixed(2),
-        cbm_confidence: row.cbm_confidence + "%"
-      }));
-      autoTable(doc, {
-        columns,
-        body: rows,
-        startY: 24,
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [37, 99, 235] }
-      });
-      doc.save("cbm_weight_results.pdf");
-    } catch (err) {
-      alert("Failed to generate PDF: " + (err?.message || err));
-    }
-  };
+        { header: "Product Count", dataKey: "product_count" },
+        { header: "Total CBM", dataKey: "total_cbm" },
+        { header: "Total Weight", dataKey: "total_weight" },
+        { header: "Total GMV", dataKey: "total_gmv" },
+      ],
+      body: orderSheet,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [37, 99, 235] }
+    });
+
+    doc.addPage();
+
+    // ---------- Sheet 2: Supplier Summary ----------
+    const supplierGroups = groupBy(results, ["supplier_name"]);
+    const supplierSheet = Object.entries(supplierGroups).map(([key, rows]) => {
+      const uniqueOrders = new Set(rows.map(r => r.order_id));
+      return {
+        supplier_name: key,
+        order_count: uniqueOrders.size,
+        product_count: rows.length,
+        total_cbm: rows.reduce((sum, r) => sum + (r.calculated_cbm || 0), 0).toFixed(4),
+        total_weight: rows.reduce((sum, r) => sum + (r.calculated_weight || 0), 0).toFixed(2),
+        total_gmv: rows.reduce((sum, r) => sum + (r.total_gmv || 0), 0).toFixed(2),
+      };
+    });
+
+    doc.setFontSize(16);
+    doc.text("Supplier Summary", 14, 16);
+    autoTable(doc, {
+      startY: 22,
+      columns: [
+        { header: "Supplier", dataKey: "supplier_name" },
+        { header: "Order Count", dataKey: "order_count" },
+        { header: "Product Count", dataKey: "product_count" },
+        { header: "Total CBM", dataKey: "total_cbm" },
+        { header: "Total Weight", dataKey: "total_weight" },
+        { header: "Total GMV", dataKey: "total_gmv" },
+      ],
+      body: supplierSheet,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [16, 185, 129] }
+    });
+
+    doc.addPage();
+
+    // ---------- Sheet 3: Customer Area View ----------
+    const areaGroups = groupBy(results, ["supplier_name", "customer_area"]);
+    const areaSheet = Object.entries(areaGroups).map(([key, rows]) => {
+      const [supplier_name, customer_area] = key.split("||");
+      const uniqueRetailers = new Set(rows.map(r => r.retailer_id));
+      const uniqueOrders = new Set(rows.map(r => r.order_id));
+      return {
+        supplier_name,
+        customer_area,
+        area_rows: rows.length,
+        retailer_count: uniqueRetailers.size,
+        order_count: uniqueOrders.size,
+        total_cbm: rows.reduce((sum, r) => sum + (r.calculated_cbm || 0), 0).toFixed(4),
+        total_weight: rows.reduce((sum, r) => sum + (r.calculated_weight || 0), 0).toFixed(2),
+        total_gmv: rows.reduce((sum, r) => sum + (r.total_gmv || 0), 0).toFixed(2),
+      };
+    });
+
+    doc.setFontSize(16);
+    doc.text("Customer Area View", 14, 16);
+    autoTable(doc, {
+      startY: 22,
+      columns: [
+        { header: "Supplier", dataKey: "supplier_name" },
+        { header: "Customer Area", dataKey: "customer_area" },
+        { header: "Rows", dataKey: "area_rows" },
+        { header: "Retailers", dataKey: "retailer_count" },
+        { header: "Orders", dataKey: "order_count" },
+        { header: "Total CBM", dataKey: "total_cbm" },
+        { header: "Total Weight", dataKey: "total_weight" },
+        { header: "Total GMV", dataKey: "total_gmv" },
+      ],
+      body: areaSheet,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [245, 158, 11] }
+    });
+
+    doc.save("cbm_summary_tables.pdf");
+  } catch (err) {
+    alert("Failed to generate PDF: " + (err?.message || err));
+  }
+};
 
   // Summary stats
   const summary = results ? (() => {
