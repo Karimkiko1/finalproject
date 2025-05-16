@@ -8,6 +8,8 @@ import animationData from "../../../lottieload.json";
 import CBM from '../../../CBM.json';
 import CBM_Main from '../../../CBM_Main.json';
 import lottieload from '../../../lottieload.json';
+import IntroJs from 'intro.js';
+import 'intro.js/minified/introjs.min.css';
 
 // --- Helper functions ported from Python ---
 
@@ -419,7 +421,33 @@ const TripAssignment = () => {
       setPhase(4); // Show summary/download
       setShowSuccess(true);
       setLoading(false);
-    }, 5000); // 7 seconds for animation
+    }, 2000); // 7 seconds for animation
+  };
+
+  // Add a helper to start the tour
+  const startTour = () => {
+    IntroJs().setOptions({
+      steps: [
+        {
+          element: document.querySelector('h1'),
+          intro: 'Welcome to the Trip Assignment Overview! This is your main dashboard.'
+        },
+        {
+          element: document.querySelector('button'),
+          intro: 'Click here to start the trip assignment process.'
+        },
+        {
+          element: document.querySelector('table'),
+          intro: 'Here you will see the results and summary tables after processing.'
+        }
+      ],
+      showProgress: true,
+      showBullets: false,
+      exitOnOverlayClick: true,
+      nextLabel: 'Next',
+      prevLabel: 'Back',
+      doneLabel: 'Finish'
+    }).start();
   };
 
   // Summary calculation
@@ -427,10 +455,11 @@ const TripAssignment = () => {
     if (!results.length) return null;
     // Totals
     const totalTrips = new Set(results.map(r => r.Trip_ID)).size;
-    const totalOrders = results.length;
-    const totalCBM = results.reduce((sum, r) => sum + safeFloat(r.order_dimension), 0);
-    const totalWeight = results.reduce((sum, r) => sum + safeFloat(r["Total Order Weight / KG"]), 0);
-    const totalGMV = results.reduce((sum, r) => sum + safeFloat(r.order_gmv), 0);
+    const validOrders = results.filter(r => r.id || r.ID || r.task_id);
+    const totalOrders = validOrders.length;
+    const totalCBM = validOrders.reduce((sum, r) => sum + safeFloat(r.order_dimension), 0);
+    const totalWeight = validOrders.reduce((sum, r) => sum + safeFloat(r["Total Order Weight / KG"]), 0);
+    const totalGMV = validOrders.reduce((sum, r) => sum + safeFloat(r.order_gmv), 0);
 
     // Supplier level
     const supplierStats = {};
@@ -471,7 +500,6 @@ const TripAssignment = () => {
     <div
       style={{
         padding: "32px",
-        maxWidth: 1200,
         margin: "0 auto",
         fontFamily: "Inter, Segoe UI, Arial, sans-serif",
         background: "linear-gradient(120deg, #f8fafc 0%, #e0e7ef 100%)",
@@ -481,20 +509,19 @@ const TripAssignment = () => {
         position: "relative"
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          background: "linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)",
-          borderRadius: 14,
-          padding: "32px 24px 20px 24px",
-          marginBottom: 32,
-          color: "#fff",
-          boxShadow: "0 4px 24px 0 rgba(37,99,235,0.08)",
-          display: "flex",
-          alignItems: "center",
-          gap: 18,
-        }}
-      >
+      {/* Header (match CBMCalculator style) */}
+      <div style={{
+        background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)',
+        borderRadius: 14,
+        padding: '36px 28px 24px 28px',
+        marginBottom: 32,
+        color: '#fff',
+        boxShadow: '0 4px 24px 0 rgba(37,99,235,0.08)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 18,
+        position: 'relative'
+      }}>
         <img
           src="https://cdn-icons-png.flaticon.com/512/2921/2921222.png"
           alt="Trip"
@@ -503,16 +530,88 @@ const TripAssignment = () => {
             height: 56,
             marginRight: 18,
             borderRadius: 8,
-            background: "#fff",
+            background: '#fff',
+            boxShadow: '0 2px 8px 0 rgba(37,99,235,0.10)'
           }}
         />
         <div>
-          <h1 style={{ margin: 0, fontWeight: 700, fontSize: 32, letterSpacing: "-1px" }}>
-            Trip Assignment
+          <h1 style={{
+            margin: 0,
+            fontWeight: 800,
+            fontSize: 38,
+            letterSpacing: '-1.5px',
+            lineHeight: 1.1,
+            textShadow: '0 2px 8px rgba(37,99,235,0.10)'
+          }}>
+            Trip Assignment Overview
           </h1>
-          <div style={{ fontSize: 17, opacity: 0.92, marginTop: 4 }}>
-            Load your orders and products from Google Sheets, calculate CBM/Weight, and assign trips automatically.
+          <div style={{
+            fontSize: 21,
+            opacity: 0.96,
+            marginTop: 6,
+            fontWeight: 500,
+            letterSpacing: '-0.5px'
+          }}>
+            Assign, View, Download. <span style={{ color: '#fbbf24', fontWeight: 700 }}>All in one place!</span>
           </div>
+        </div>
+        <div style={{
+          position: 'absolute',
+          right: 28,
+          top: 24,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10
+        }}>
+          <a
+            href="Start-Onboarding"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: '#fff',
+              background: 'rgba(37,99,235,0.18)',
+              borderRadius: 7,
+              padding: '7px 16px',
+              fontWeight: 600,
+              fontSize: 15,
+              textDecoration: 'none',
+              transition: 'background 0.2s'
+            }}
+          >
+            Need Help?
+          </a>
+          <a
+            href="mailto:karem.said@cartona.com"
+            style={{
+              color: '#fff',
+              background: 'rgba(251,191,36,0.18)',
+              borderRadius: 7,
+              padding: '7px 16px',
+              fontWeight: 600,
+              fontSize: 15,
+              textDecoration: 'none',
+              transition: 'background 0.2s'
+            }}
+          >
+            Contact Support
+          </a>
+          <a
+            href="#"
+            onClick={e => { e.preventDefault(); startTour(); }}
+            style={{
+              color: '#fff',
+              background: 'rgba(16,185,129,0.18)',
+              borderRadius: 7,
+              padding: '7px 16px',
+              fontWeight: 600,
+              fontSize: 15,
+              textDecoration: 'none',
+              transition: 'background 0.2s',
+              marginLeft: 10
+            }}
+          >
+            Guided Tour
+          </a>
         </div>
       </div>
 
@@ -625,71 +724,201 @@ const TripAssignment = () => {
           {error}
         </div>
       )}
-
-      {/* Success Pop-up */}
-      {showSuccess && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0, left: 0, width: "100vw", height: "100vh",
-            background: "rgba(0,0,0,0.18)",
-            zIndex: 1000,
-            display: "flex", alignItems: "center", justifyContent: "center"
-          }}
-        >
-          <div
-            style={{
-              background: "#fff",
-              borderRadius: 16,
-              padding: "36px 32px",
-              boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.18)",
-              minWidth: 340,
-              textAlign: "center"
-            }}
-          >
-            <div style={{ fontSize: 38, color: "#22c55e", marginBottom: 12 }}>✔</div>
-            <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>
-              All trips are assigned!
+    
+      {/* Summary Section (moved from modal, styled like CBMCalculator) */}
+      {summary && (
+        <div style={{
+          background: '#fff',
+          borderRadius: 18,
+          padding: '40px 36px 28px 36px',
+          boxShadow: '0 2px 12px 0 rgba(0,0,0,0.04)',
+          width: '100%',
+          minHeight: 420,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          margin: 0,
+          boxSizing: 'border-box',
+          overflow: 'hidden',
+          marginBottom: 32
+        }}>
+          <h2 style={{ 
+            color: '#2563eb', 
+            fontWeight: 700, 
+            marginBottom: 32, 
+            fontSize: 32, 
+            textAlign: 'center', 
+            width: '100%'
+          }}>
+            Trip Assignment Summary
+          </h2>
+          <div style={{
+            display: 'flex',
+            gap: 32,
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            marginBottom: 24,
+            width: '100%'
+          }}>
+            <div style={{
+              background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)',
+              color: '#fff',
+              borderRadius: 12,
+              padding: '28px 22px',
+              minWidth: 200,
+              textAlign: 'center',
+              flex: 1,
+              margin: '0 16px',
+              fontSize: 22
+            }}>
+              <div style={{ fontSize: 18, opacity: 0.9 }}>Total Trips</div>
+              <div style={{ fontWeight: 700, fontSize: 32 }}>{summary.totalTrips}</div>
             </div>
-            <div style={{ fontSize: 16, color: "#64748b", marginBottom: 24 }}>
-              Click below to download results or view summary.
+            <div style={{
+              background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)',
+              color: '#fff',
+              borderRadius: 12,
+              padding: '28px 22px',
+              minWidth: 200,
+              textAlign: 'center',
+              flex: 1,
+              margin: '0 16px',
+              fontSize: 22
+            }}>
+              <div style={{ fontSize: 18, opacity: 0.9 }}>Total Orders</div>
+              <div style={{ fontWeight: 700, fontSize: 32 }}>{summary.totalOrders}</div>
             </div>
-            <button
-              onClick={() => { handleDownloadResults(); setShowSuccess(false); }}
-              style={{
-                background: "linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)",
-                color: "#fff",
-                padding: "12px 28px",
-                borderRadius: 8,
-                fontWeight: 600,
-                fontSize: 16,
-                border: "none",
-                cursor: "pointer",
-                marginRight: 12
-              }}
-            >
-              Download Assigned Trips
-            </button>
-            <button
-              onClick={() => { setShowSummary(true); setShowSuccess(false); }}
-              style={{
-                background: "linear-gradient(90deg, #22c55e 0%, #bef264 100%)",
-                color: "#fff",
-                padding: "12px 28px",
-                borderRadius: 8,
-                fontWeight: 600,
-                fontSize: 16,
-                border: "none",
-                cursor: "pointer"
-              }}
-            >
-              Show Summary
-            </button>
+            <div style={{
+              background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)',
+              color: '#fff',
+              borderRadius: 12,
+              padding: '28px 22px',
+              minWidth: 200,
+              textAlign: 'center',
+              flex: 1,
+              margin: '0 16px',
+              fontSize: 22
+            }}>
+              <div style={{ fontSize: 18, opacity: 0.9 }}>Total CBM</div>
+              <div style={{ fontWeight: 700, fontSize: 32 }}>{summary.totalCBM.toFixed(2)}</div>
+            </div>
+            <div style={{
+              background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)',
+              color: '#fff',
+              borderRadius: 12,
+              padding: '28px 22px',
+              minWidth: 200,
+              textAlign: 'center',
+              flex: 1,
+              margin: '0 16px',
+              fontSize: 22
+            }}>
+              <div style={{ fontSize: 18, opacity: 0.9 }}>Total Weight</div>
+              <div style={{ fontWeight: 700, fontSize: 32 }}>{summary.totalWeight.toFixed(2)} kg</div>
+            </div>
+            <div style={{
+              background: 'linear-gradient(90deg, #f59e42 0%, #fbbf24 100%)',
+              color: '#fff',
+              borderRadius: 12,
+              padding: '28px 22px',
+              minWidth: 200,
+              textAlign: 'center',
+              flex: 1,
+              margin: '0 16px',
+              fontSize: 22
+            }}>
+              <div style={{ fontSize: 18, opacity: 0.9 }}>Total GMV</div>
+              <div style={{ fontWeight: 700, fontSize: 32 }}>{summary.totalGMV.toFixed(2)}</div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Summary Modal */}
+      {/* Supplier Level Table (styled like CBMCalculator) */}
+      {summary && (
+        <div style={{ background: '#fff', borderRadius: 14, padding: 24, boxShadow: '0 2px 12px 0 rgba(0,0,0,0.04)', marginBottom: 32 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <h3 style={{ color: '#0f172a', fontWeight: 700, fontSize: 20, marginBottom: 0 }}>
+              Supplier View
+            </h3>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15, background: '#f8fafc', borderRadius: 10, overflow: 'hidden' }}>
+              <thead>
+                <tr style={{ background: '#e0e7ef' }}>
+                  <th style={{ padding: '10px 8px' }}>Supplier</th>
+                  <th style={{ padding: '10px 8px' }}>Orders</th>
+                  <th style={{ padding: '10px 8px' }}>CBM</th>
+                  <th style={{ padding: '10px 8px' }}>Weight</th>
+                  <th style={{ padding: '10px 8px' }}>GMV</th>
+                  <th style={{ padding: '10px 8px' }}>Trips</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(summary.supplierStats).slice(0, 15).map(([sup, stat]) => (
+                  <tr key={sup} style={{ background: '#fff' }}>
+                    <td style={{ padding: '8px 8px' }}>{sup}</td>
+                    <td style={{ padding: '8px 8px' }}>{stat.orders}</td>
+                    <td style={{ padding: '8px 8px' }}>{stat.cbm.toFixed(2)}</td>
+                    <td style={{ padding: '8px 8px' }}>{stat.weight.toFixed(2)}</td>
+                    <td style={{ padding: '8px 8px' }}>{stat.gmv.toFixed(2)}</td>
+                    <td style={{ padding: '8px 8px' }}>{stat.trips.size}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {Object.entries(summary.supplierStats).length > 15 && (
+              <div style={{ color: '#64748b', fontSize: 14, marginTop: 8 }}>
+                Showing first 15 rows. Download for full data.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Area Level Table (styled like CBMCalculator) */}
+      {summary && (
+        <div style={{ background: '#fff', borderRadius: 14, padding: 24, boxShadow: '0 2px 12px 0 rgba(0,0,0,0.04)', marginBottom: 32 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <h3 style={{ color: '#0f172a', fontWeight: 700, fontSize: 20, marginBottom: 0 }}>
+              Area View
+            </h3>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15, background: '#f8fafc', borderRadius: 10, overflow: 'hidden' }}>
+              <thead>
+                <tr style={{ background: '#e0e7ef' }}>
+                  <th style={{ padding: '10px 8px' }}>Area</th>
+                  <th style={{ padding: '10px 8px' }}>Orders</th>
+                  <th style={{ padding: '10px 8px' }}>CBM</th>
+                  <th style={{ padding: '10px 8px' }}>Weight</th>
+                  <th style={{ padding: '10px 8px' }}>GMV</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(summary.areaStats).slice(0, 15).map(([area, stat]) => (
+                  <tr key={area} style={{ background: '#fff' }}>
+                    <td style={{ padding: '8px 8px' }}>{area}</td>
+                    <td style={{ padding: '8px 8px' }}>{stat.orders}</td>
+                    <td style={{ padding: '8px 8px' }}>{stat.cbm.toFixed(2)}</td>
+                    <td style={{ padding: '8px 8px' }}>{stat.weight.toFixed(2)}</td>
+                    <td style={{ padding: '8px 8px' }}>{stat.gmv.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {Object.entries(summary.areaStats).length > 15 && (
+              <div style={{ color: '#64748b', fontSize: 14, marginTop: 8 }}>
+                Showing first 15 rows. Download for full data.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Remove summary from modal, keep only the close button and intro */}
       {showSummary && summary && (
         <div
           style={{
@@ -716,87 +945,6 @@ const TripAssignment = () => {
             </div>
             <div style={{ fontSize: 16, color: "#64748b", marginBottom: 18 }}>
               Overview of all trips, suppliers, and areas.
-            </div>
-            <div style={{ display: "flex", gap: 24, flexWrap: "wrap", justifyContent: "center", marginBottom: 18 }}>
-              <div style={{ background: "#f1f5f9", borderRadius: 10, padding: 18, minWidth: 160 }}>
-                <div style={{ fontSize: 15, color: "#64748b" }}>Total Trips</div>
-                <div style={{ fontWeight: 700, fontSize: 22 }}>{summary.totalTrips}</div>
-              </div>
-              <div style={{ background: "#f1f5f9", borderRadius: 10, padding: 18, minWidth: 160 }}>
-                <div style={{ fontSize: 15, color: "#64748b" }}>Trips Overview</div>
-              </div>
-              <div style={{ background: "#f1f5f9", borderRadius: 10, padding: 18, minWidth: 160 }}>
-                <div style={{ fontSize: 15, color: "#64748b" }}>Total Orders</div>
-                <div style={{ fontWeight: 700, fontSize: 22 }}>{summary.totalOrders}</div>
-              </div>
-              <div style={{ background: "#f1f5f9", borderRadius: 10, padding: 18, minWidth: 160 }}>
-                <div style={{ fontSize: 15, color: "#64748b" }}>Total CBM</div>
-                <div style={{ fontWeight: 700, fontSize: 22 }}>{summary.totalCBM.toFixed(2)}</div>
-              </div>
-              <div style={{ background: "#f1f5f9", borderRadius: 10, padding: 18, minWidth: 160 }}>
-                <div style={{ fontSize: 15, color: "#64748b" }}>Total Weight (KG)</div>
-                <div style={{ fontWeight: 700, fontSize: 22 }}>{summary.totalWeight.toFixed(2)}</div>
-              </div>
-              <div style={{ background: "#f1f5f9", borderRadius: 10, padding: 18, minWidth: 160 }}>
-                <div style={{ fontSize: 15, color: "#64748b" }}>Total GMV</div>
-                <div style={{ fontWeight: 700, fontSize: 22 }}>{summary.totalGMV.toFixed(2)}</div>
-              </div>
-            </div>
-            <div style={{ textAlign: "left", marginTop: 18, marginBottom: 10, fontWeight: 600, color: "#2563eb" }}>
-              Supplier Level Summary
-            </div>
-            <div style={{ maxHeight: 180, overflowY: "auto", marginBottom: 10 }}>
-              <table style={{ width: "100%", fontSize: 15, borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "#e0e7ef" }}>
-                    <th style={{ padding: "6px 8px" }}>Supplier</th>
-                    <th style={{ padding: "6px 8px" }}>Orders</th>
-                    <th style={{ padding: "6px 8px" }}>CBM</th>
-                    <th style={{ padding: "6px 8px" }}>Weight</th>
-                    <th style={{ padding: "6px 8px" }}>GMV</th>
-                    <th style={{ padding: "6px 8px" }}>Trips</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(summary.supplierStats).map(([sup, stat]) => (
-                    <tr key={sup}>
-                      <td style={{ padding: "6px 8px" }}>{sup}</td>
-                      <td style={{ padding: "6px 8px" }}>{stat.orders}</td>
-                      <td style={{ padding: "6px 8px" }}>{stat.cbm.toFixed(2)}</td>
-                      <td style={{ padding: "6px 8px" }}>{stat.weight.toFixed(2)}</td>
-                      <td style={{ padding: "6px 8px" }}>{stat.gmv.toFixed(2)}</td>
-                      <td style={{ padding: "6px 8px" }}>{stat.trips.size}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ textAlign: "left", marginTop: 18, marginBottom: 10, fontWeight: 600, color: "#2563eb" }}>
-              Area Level Summary
-            </div>
-            <div style={{ maxHeight: 180, overflowY: "auto" }}>
-              <table style={{ width: "100%", fontSize: 15, borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "#e0e7ef" }}>
-                    <th style={{ padding: "6px 8px" }}>Area</th>
-                    <th style={{ padding: "6px 8px" }}>Orders</th>
-                    <th style={{ padding: "6px 8px" }}>CBM</th>
-                    <th style={{ padding: "6px 8px" }}>Weight</th>
-                    <th style={{ padding: "6px 8px" }}>GMV</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(summary.areaStats).map(([area, stat]) => (
-                    <tr key={area}>
-                      <td style={{ padding: "6px 8px" }}>{area}</td>
-                      <td style={{ padding: "6px 8px" }}>{stat.orders}</td>
-                      <td style={{ padding: "6px 8px" }}>{stat.cbm.toFixed(2)}</td>
-                      <td style={{ padding: "6px 8px" }}>{stat.weight.toFixed(2)}</td>
-                      <td style={{ padding: "6px 8px" }}>{stat.gmv.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
             <button
               onClick={() => setShowSummary(false)}
@@ -888,9 +1036,6 @@ const TripAssignment = () => {
 
       {/* Footer Note */}
       <div style={{ marginTop: 32, textAlign: "center", color: "#64748b", fontSize: 15 }}>
-        <span>
-          Need help? See the <b>How to use</b> instructions in the sidebar or contact support.
-        </span>
       </div>
     </div>
   );
