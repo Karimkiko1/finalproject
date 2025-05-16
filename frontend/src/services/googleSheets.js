@@ -34,7 +34,7 @@ export const loadSheetData = async (sheetName) => {
   await initGoogleAPI();
   const response = await window.gapi.client.sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: sheetName,
+    range: `${sheetName}!A1:Z3`, // Only fetch first 3 rows and up to column Z
     valueRenderOption: 'UNFORMATTED_VALUE'
   });
   if (!response.result?.values?.length) {

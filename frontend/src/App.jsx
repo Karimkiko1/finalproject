@@ -9,7 +9,6 @@ import TripAssignment from './pages/TripAssignment.jsx';
 import SupplierTripAssignment from './pages/SupplierTripAssignment.jsx';
 function App() {
   const navLinks = [
-    { to: "/", label: "Dashboard" },
     { to: "/cbm", label: "Weights & Dimensions" },
     { to: "/drivers", label: "Drivers Locations" },
     { to: "/RetailersLocations", label: "Retailers Locations" },
@@ -67,7 +66,6 @@ function App() {
         ))}
       </nav>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
         <Route path="/drivers" element={<DriversLocations />} />
         <Route path="/RetailersLocations" element={<RetailersLocations />} />
         <Route path="/cbm" element={<CBMCalculator />} />

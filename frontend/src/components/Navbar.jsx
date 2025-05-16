@@ -18,22 +18,6 @@ const Navbar = () => (
     background: "#f8fafc",
     borderBottom: "1px solid #e5e7eb"
   }}>
-    <Link to="/" style={{
-      fontWeight: 500,
-      textDecoration: "none",
-      padding: "10px 18px",
-      borderRadius: 6,
-      transition: "background 0.2s, color 0.2s, border 0.2s",
-      fontSize: 16,
-      letterSpacing: 0.2,
-      border: "1px solid #2563eb",
-      outline: "none",
-      cursor: "pointer",
-      display: "inline-block",
-      color: "#2563eb",
-      background: "#fff",
-      marginRight: 8
-    }}>Dashboard</Link>
     <Link to="/cbm" style={{
       fontWeight: 500,
       textDecoration: "none",
