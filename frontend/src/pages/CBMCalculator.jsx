@@ -9,6 +9,8 @@ import animationData from "../../../CBM.json";
 import mainAnimation from "../../../CBM_Main.json";
 import { utils as XLSXUtils, writeFile as XLSXWriteFile } from "xlsx";
 import { updateSheetValues } from "../services/googleSheets";
+import IntroJs from 'intro.js';
+import 'intro.js/minified/introjs.min.css';
 
 const RUNSHEET_SUMMARY_KEY = 'cbm_runsheet_summary';
 
@@ -487,6 +489,80 @@ const CBMCalculator = () => {
     }
   };
 
+  // Add a helper to start the tour in Arabic
+  const startTour = () => {
+    IntroJs().setOptions({
+      steps: [
+        {
+          element: document.querySelector('h1'),
+          intro: 'مرحبًا بك في لوحة تحكم حساب الأبعاد والأوزان!'
+        },
+        {
+          element: document.querySelector('button[onClick="handleRefreshCBM"]'),
+          intro: 'اضغط هنا لتحديث بيانات الأبعاد والأوزان.'
+        },
+        {
+          element: document.querySelector('select'),
+          intro: 'اختر المورد لعرض بياناته فقط.'
+        },
+        {
+          element: document.querySelector('div[style*="Summary Section"]'),
+          intro: 'هنا ملخص الطلبات، الأبعاد، الأوزان، والثقة.'
+        },
+        {
+          element: document.querySelector('div[style*="Mapping and Calculation Section"]'),
+          intro: 'قم بتعيين الأعمدة المطلوبة إذا لم تتطابق تلقائيًا.'
+        },
+        {
+          element: document.querySelector('div[style*="Details (First 10 Rows)"] button'),
+          intro: 'يمكنك تحميل النتائج كملف Excel أو PDF من هنا.'
+        },
+        {
+          element: document.querySelector('div[style*="Order View Table"] button'),
+          intro: 'اضغط هنا لتحميل ملخص الطلبات.'
+        },
+        {
+          element: document.querySelector('div[style*="Supplier View Table"] button'),
+          intro: 'اضغط هنا لتحميل ملخص الموردين.'
+        },
+        {
+          element: document.querySelector('div[style*="Customer Area View Table"] button'),
+          intro: 'اضغط هنا لتحميل ملخص المناطق.'
+        },
+        {
+          element: document.querySelector('div[style*="Footer Note"]'),
+          intro: 'للمساعدة أو الدعم، راجع التعليمات أو تواصل مع الدعم الفني.'
+        }
+      ],
+      showProgress: true,
+      showBullets: false,
+      exitOnOverlayClick: true,
+      highlightClass: 'introjs-custom-highlight',
+      overlayOpacity: 0.6,
+      nextLabel: 'التالي',
+      prevLabel: 'السابق',
+      doneLabel: 'إنهاء'
+    }).start();
+  };
+
+  // Custom highlight style for Intro.js
+  // Add this style to the page
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .introjs-custom-highlight {
+        box-shadow: 0 0 0 4px #2563eb, 0 0 0 100vw rgba(0,0,0,0.18);
+        border-radius: 12px !important;
+        z-index: 99999 !important;
+      }
+      .introjs-overlay {
+        background: rgba(0,0,0,0.6) !important;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => { document.head.removeChild(style); };
+  }, []);
+
   // Defensive rendering
   try {
     if (showLottie || loadingFallback || fallbackData === null) {
@@ -581,7 +657,6 @@ const CBMCalculator = () => {
             gap: 10
           }}>
             <a
-//---------------------------"Start-Onboarding" -------------------------------
               href="Start-Onboarding"
               target="_blank"
               rel="noopener noreferrer"
@@ -612,6 +687,23 @@ const CBMCalculator = () => {
               }}
             >
               Contact Support
+            </a>
+            <a
+              href="#"
+              onClick={e => { e.preventDefault(); startTour(); }}
+              style={{
+                color: '#fff',
+                background: 'rgba(16,185,129,0.18)',
+                borderRadius: 7,
+                padding: '7px 16px',
+                fontWeight: 600,
+                fontSize: 15,
+                textDecoration: 'none',
+                transition: 'background 0.2s',
+                marginLeft: 10
+              }}
+            >
+              Guided Tour
             </a>
           </div>
         </div>

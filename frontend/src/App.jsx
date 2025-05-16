@@ -71,7 +71,9 @@ function App() {
         <Route path="/cbm" element={<CBMCalculator />} />
         <Route path="/trips" element={<TripAssignment />} />
         <Route path="/supplier-trip-assignment" element={<SupplierTripAssignment />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Redirect root to /cbm as homepage */}
+        <Route path="/" element={<Navigate to="/cbm" replace />} />
+        <Route path="*" element={<Navigate to="/cbm" replace />} />
       </Routes>
     </Router>
   );
