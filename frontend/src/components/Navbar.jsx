@@ -66,7 +66,7 @@ const Navbar = () => (
       background: "#fff",
       marginRight: 8
     }}>Supplier Trip Assignment</Link>
-    <Link to="/RetailersLocations" style={{
+{/*     <Link to="/RetailersLocations" style={{
       fontWeight: 500,
       textDecoration: "none",
       padding: "10px 18px",
@@ -81,7 +81,7 @@ const Navbar = () => (
       color: "#2563eb",
       background: "#fff",
       marginRight: 8
-    }}>Retailers Locations</Link>
+    }}>Retailers Locations</Link> */}
     <button onClick={handleAutoCommit} style={{ marginLeft: 'auto', padding: '8px 18px', borderRadius: 7, fontWeight: 600, fontSize: 15, border: 'none', background: '#2563eb', color: '#fff', cursor: 'pointer' }}>
       Auto Commit
     </button>
