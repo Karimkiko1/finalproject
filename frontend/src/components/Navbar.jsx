@@ -18,11 +18,86 @@ const Navbar = () => (
     background: "#f8fafc",
     borderBottom: "1px solid #e5e7eb"
   }}>
-    <Link to="/" style={{ fontWeight: 600, color: "#2563eb", textDecoration: "none" }}>Dashboard</Link>
-    <Link to="/trips" style={{ fontWeight: 600, color: "#2563eb", textDecoration: "none" }}>Trip Assignment</Link>
-    <Link to="/SupplierTripAssignment" style={{ fontWeight: 600, color: "#be123c", textDecoration: "none" }}>Supplier Trip Assignment</Link>
-    <Link to="/cbm" style={{ fontWeight: 600, color: "#0ea5e9", textDecoration: "none" }}>CBM Calculations</Link>
-    <Link to="/RetailersLocations" style={{ fontWeight: 600, color: "#22c55e", textDecoration: "none" }}>Retailers Locations</Link>
+    <Link to="/" style={{
+      fontWeight: 500,
+      textDecoration: "none",
+      padding: "10px 18px",
+      borderRadius: 6,
+      transition: "background 0.2s, color 0.2s, border 0.2s",
+      fontSize: 16,
+      letterSpacing: 0.2,
+      border: "1px solid #2563eb",
+      outline: "none",
+      cursor: "pointer",
+      display: "inline-block",
+      color: "#2563eb",
+      background: "#fff",
+      marginRight: 8
+    }}>Dashboard</Link>
+    <Link to="/cbm" style={{
+      fontWeight: 500,
+      textDecoration: "none",
+      padding: "10px 18px",
+      borderRadius: 6,
+      transition: "background 0.2s, color 0.2s, border 0.2s",
+      fontSize: 16,
+      letterSpacing: 0.2,
+      border: "1px solid #2563eb",
+      outline: "none",
+      cursor: "pointer",
+      display: "inline-block",
+      color: "#2563eb",
+      background: "#fff",
+      marginRight: 8
+    }}>Weights & Dimensions</Link>
+    <Link to="/trips" style={{
+      fontWeight: 500,
+      textDecoration: "none",
+      padding: "10px 18px",
+      borderRadius: 6,
+      transition: "background 0.2s, color 0.2s, border 0.2s",
+      fontSize: 16,
+      letterSpacing: 0.2,
+      border: "1px solid #2563eb",
+      outline: "none",
+      cursor: "pointer",
+      display: "inline-block",
+      color: "#2563eb",
+      background: "#fff",
+      marginRight: 8
+    }}>Trip Assignment</Link>
+    <Link to="/SupplierTripAssignment" style={{
+      fontWeight: 500,
+      textDecoration: "none",
+      padding: "10px 18px",
+      borderRadius: 6,
+      transition: "background 0.2s, color 0.2s, border 0.2s",
+      fontSize: 16,
+      letterSpacing: 0.2,
+      border: "1px solid #2563eb",
+      outline: "none",
+      cursor: "pointer",
+      display: "inline-block",
+      color: "#2563eb",
+      background: "#fff",
+      marginRight: 8
+    }}>Supplier Trip Assignment</Link>
+    <Link to="/RetailersLocations" style={{
+      fontWeight: 500,
+      textDecoration: "none",
+      padding: "10px 18px",
+      borderRadius: 6,
+      transition: "background 0.2s, color 0.2s, border 0.2s",
+      fontSize: 16,
+      letterSpacing: 0.2,
+      border: "1px solid #2563eb",
+      outline: "none",
+      cursor: "pointer",
+      display: "inline-block",
+      color: "#2563eb",
+      background: "#fff",
+      marginRight: 8
+    }}>Retailers Locations</Link>
     <button onClick={handleAutoCommit} style={{ marginLeft: 'auto', padding: '8px 18px', borderRadius: 7, fontWeight: 600, fontSize: 15, border: 'none', background: '#2563eb', color: '#fff', cursor: 'pointer' }}>
       Auto Commit
     </button>

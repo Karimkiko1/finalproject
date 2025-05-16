@@ -7,19 +7,64 @@ import RetailersLocations from './pages/RetailersLocations.jsx';
 import CBMCalculator from './pages/CBMCalculator.jsx';
 import TripAssignment from './pages/TripAssignment.jsx';
 import SupplierTripAssignment from './pages/SupplierTripAssignment.jsx';
-
-
 function App() {
+  const navLinks = [
+    { to: "/", label: "Dashboard" },
+    { to: "/cbm", label: "Weights & Dimensions" },
+    { to: "/drivers", label: "Drivers Locations" },
+    { to: "/RetailersLocations", label: "Retailers Locations" },
+    { to: "/trips", label: "Trip Assignment" },
+    { to: "/supplier-trip-assignment", label: "Supplier Trip Assignment" },
+  ];
+
+  const navColor = "#f59e42";
+
   return (
     <Router>
-      {/* Navigation Bar */}
-      <nav style={{ display: "flex", gap: 24, padding: 24, background: "#f8fafc" }}>
-        <Link to="/" style={{ fontWeight: 600, color: "#2563eb", textDecoration: "none" }}>Dashboard</Link>
-        <Link to="/drivers" style={{ fontWeight: 600, color: "#0ea5e9", textDecoration: "none" }}>Drivers Locations</Link>
-        <Link to="/RetailersLocations" style={{ fontWeight: 600, color: "#22c55e", textDecoration: "none" }}>Retailers Locations</Link>
-        <Link to="/cbm" style={{ fontWeight: 600, color: "#f59e42", textDecoration: "none" }}>CBM Calculator</Link>
-        <Link to="/trips" style={{ fontWeight: 600, color: "#be123c", textDecoration: "none" }}>Trip Assignment</Link>
-        <Link to="/supplier-trip-assignment" style={{ fontWeight: 600, color: "#a855f7", textDecoration: "none" }}>Supplier Trip Assignment</Link>
+      {/* Professional Navigation Bar */}
+      <nav
+        style={{
+          display: "flex",
+          gap: 16,
+          padding: "18px 32px",
+          background: "#f8fafc",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+          alignItems: "center",
+        }}
+      >
+        {navLinks.map((link) => (
+          <Link
+            key={link.to}
+            to={link.to}
+            style={{
+              fontWeight: 500,
+              color: "#374151",
+              background: "#f3f4f6",
+              textDecoration: "none",
+              padding: "10px 18px",
+              borderRadius: 6,
+              transition: "background 0.2s, color 0.2s, transform 0.1s",
+              fontSize: 16,
+              letterSpacing: 0.2,
+              border: "1px solid #e5e7eb",
+              outline: "none",
+              cursor: "pointer",
+              display: "inline-block",
+            }}
+            onMouseOver={e => {
+              e.target.style.background = "#f59e42";
+              e.target.style.color = "#fff";
+              e.target.style.transform = "translateY(-1px) scale(1.02)";
+            }}
+            onMouseOut={e => {
+              e.target.style.background = "#f3f4f6";
+              e.target.style.color = "#374151";
+              e.target.style.transform = "none";
+            }}
+          >
+            {link.label}
+          </Link>
+        ))}
       </nav>
       <Routes>
         <Route path="/" element={<Dashboard />} />

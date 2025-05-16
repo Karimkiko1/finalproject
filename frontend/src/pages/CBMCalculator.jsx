@@ -538,19 +538,83 @@ const CBMCalculator = () => {
               height: 56,
               marginRight: 18,
               borderRadius: 8,
-              background: '#fff'
+              background: '#fff',
+              boxShadow: '0 2px 8px 0 rgba(37,99,235,0.10)'
             }}
           />
           <div>
-            <h1 style={{ margin: 0, fontWeight: 700, fontSize: 36, letterSpacing: '-1px' }}>
-              CBM & Weight Calculator
+            <h1 style={{
+              margin: 0,
+              fontWeight: 800,
+              fontSize: 38,
+              letterSpacing: '-1.5px',
+              lineHeight: 1.1,
+              textShadow: '0 2px 8px rgba(37,99,235,0.10)'
+            }}>
+              CBM &amp; Weight Calculator
             </h1>
-            <div style={{ fontSize: 20, opacity: 0.92, marginTop: 4 }}>
-              Select a supplier to view CBM & Weight calculations with confidence levels.
+            <div style={{
+              fontSize: 21,
+              opacity: 0.96,
+              marginTop: 6,
+              fontWeight: 500,
+              letterSpacing: '-0.5px'
+            }}>
+              Update. Select. Download. <span style={{ color: "#fbbf24", fontWeight: 700 }}>That's it!</span>
+            </div>
+            <div style={{
+              marginTop: 10,
+              fontSize: 15,
+              color: "#e0e7ef",
+              fontWeight: 400,
+              letterSpacing: 0,
+              opacity: 0.92
+            }}>
             </div>
           </div>
+          <div style={{
+            position: "absolute",
+            right: 28,
+            top: 24,
+            display: "flex",
+            alignItems: "center",
+            gap: 10
+          }}>
+            <a
+//---------------------------"Start-Onboarding" -------------------------------
+              href="Start-Onboarding"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: "#fff",
+                background: "rgba(37,99,235,0.18)",
+                borderRadius: 7,
+                padding: "7px 16px",
+                fontWeight: 600,
+                fontSize: 15,
+                textDecoration: "none",
+                transition: "background 0.2s"
+              }}
+            >
+              Need Help?
+            </a>
+            <a
+              href="mailto:karem.said@cartona.com"
+              style={{
+                color: "#fff",
+                background: "rgba(251,191,36,0.18)",
+                borderRadius: 7,
+                padding: "7px 16px",
+                fontWeight: 600,
+                fontSize: 15,
+                textDecoration: "none",
+                transition: "background 0.2s"
+              }}
+            >
+              Contact Support
+            </a>
+          </div>
         </div>
-
         {/* Controls */}
         <div
           style={{
