@@ -285,13 +285,13 @@ const CBMCalculator = () => {
       const mapping = mapColumns(filtered, requiredCols);
       setColMapping(mapping);
       setMissingCols(requiredCols.filter(col => !mapping[col]));
-      setResults(null);
+      // Do NOT setResults(null) here; keep previous results so tables persist
     } else {
       setFilteredData(runsheetData);
       const mapping = mapColumns(runsheetData, requiredCols);
       setColMapping(mapping);
       setMissingCols(requiredCols.filter(col => !mapping[col]));
-      setResults(null);
+      // Do NOT setResults(null) here; keep previous results so tables persist
     }
   }, [selectedSupplier, runsheetData]);
 
@@ -416,7 +416,7 @@ const CBMCalculator = () => {
       setMissingCols(requiredCols.filter(col => !mapping[col]));
       // Only proceed if all required columns are mapped
       if (requiredCols.some(col => !mapping[col])) {
-        setResults(null);
+        // Do NOT setResults(null) here; keep previous results so tables persist
         setRefreshing(false);
         return;
       }
