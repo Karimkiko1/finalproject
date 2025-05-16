@@ -9,7 +9,7 @@ import TripAssignment from './pages/TripAssignment.jsx';
 import SupplierTripAssignment from './pages/SupplierTripAssignment.jsx';
 function App() {
   const navLinks = [
-    { to: "/", label: "Weights & Dimensions" },
+    { to: "/cbm", label: "Weights & Dimensions" },
     { to: "/drivers", label: "Drivers Locations" },
     { to: "/RetailersLocations", label: "Retailers Locations" },
     { to: "/trips", label: "Trip Assignment" },
