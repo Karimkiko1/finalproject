@@ -490,48 +490,53 @@ const CBMCalculator = () => {
   };
 
   // Add a helper to start the tour in Arabic
+  // Arabic Guided Tour for buttons and tables
   const startTour = () => {
     IntroJs().setOptions({
       steps: [
         {
           element: document.querySelector('h1'),
-          intro: 'مرحبًا بك في لوحة تحكم حساب الأبعاد والأوزان!'
+          intro: 'مرحبًا بك في شاشة الأوزان والأبعاد!'
         },
         {
-          element: document.querySelector('button[onClick="handleRefreshCBM"]'),
-          intro: 'اضغط هنا لتحديث بيانات الأبعاد والأوزان.'
+          element: document.querySelector('button[onClick]'),
+          intro: 'اضغط هنا لتحديث بيانات الأبعاد والأوزان من المصدر.'
         },
         {
           element: document.querySelector('select'),
-          intro: 'اختر المورد لعرض بياناته فقط.'
+          intro: 'اختر المورد لعرض بياناته فقط أو اعرض الكل.'
         },
         {
-          element: document.querySelector('div[style*="Summary Section"]'),
-          intro: 'هنا ملخص الطلبات، الأبعاد، الأوزان، والثقة.'
+          element: document.querySelector('div:has(h3:contains("Details"))'),
+          intro: 'هنا جدول التفاصيل: يعرض أول 10 صفوف من النتائج المحسوبة.'
         },
         {
-          element: document.querySelector('div[style*="Mapping and Calculation Section"]'),
-          intro: 'قم بتعيين الأعمدة المطلوبة إذا لم تتطابق تلقائيًا.'
+          element: document.querySelector('div:has(h3:contains("Order View"))'),
+          intro: 'جدول ملخص الطلبات: يعرض إجمالي المنتجات والأبعاد والأوزان لكل طلب.'
         },
         {
-          element: document.querySelector('div[style*="Details (First 10 Rows)"] button'),
+          element: document.querySelector('div:has(h3:contains("Supplier View"))'),
+          intro: 'جدول ملخص الموردين: يعرض إجمالي الطلبات والمنتجات والأوزان لكل مورد.'
+        },
+        {
+          element: document.querySelector('div:has(h3:contains("Customer Area View"))'),
+          intro: 'جدول المناطق: يعرض ملخص حسب المنطقة وعدد التجار والطلبات.'
+        },
+        {
+          element: document.querySelector('div:has(h3:contains("Details")) button'),
           intro: 'يمكنك تحميل النتائج كملف Excel أو PDF من هنا.'
         },
         {
-          element: document.querySelector('div[style*="Order View Table"] button'),
-          intro: 'اضغط هنا لتحميل ملخص الطلبات.'
+          element: document.querySelector('div:has(h3:contains("Order View")) button'),
+          intro: 'اضغط هنا لتحميل ملخص الطلبات كملف Excel.'
         },
         {
-          element: document.querySelector('div[style*="Supplier View Table"] button'),
-          intro: 'اضغط هنا لتحميل ملخص الموردين.'
+          element: document.querySelector('div:has(h3:contains("Supplier View")) button'),
+          intro: 'اضغط هنا لتحميل ملخص الموردين كملف Excel.'
         },
         {
-          element: document.querySelector('div[style*="Customer Area View Table"] button'),
-          intro: 'اضغط هنا لتحميل ملخص المناطق.'
-        },
-        {
-          element: document.querySelector('div[style*="Footer Note"]'),
-          intro: 'للمساعدة أو الدعم، راجع التعليمات أو تواصل مع الدعم الفني.'
+          element: document.querySelector('div:has(h3:contains("Customer Area View")) button'),
+          intro: 'اضغط هنا لتحميل ملخص المناطق كملف Excel.'
         }
       ],
       showProgress: true,

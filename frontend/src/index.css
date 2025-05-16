@@ -6,3 +6,58 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Responsive utility classes and overrides */
+@media (max-width: 900px) {
+  .responsive-flex {
+    flex-direction: column !important;
+    gap: 16px !important;
+    align-items: stretch !important;
+  }
+  .responsive-summary {
+    flex-direction: column !important;
+    gap: 16px !important;
+    align-items: stretch !important;
+  }
+  .responsive-table {
+    font-size: 13px !important;
+  }
+  .responsive-header {
+    flex-direction: column !important;
+    gap: 10px !important;
+    align-items: flex-start !important;
+    padding: 18px 10px !important;
+  }
+  .responsive-padding {
+    padding: 12px !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .responsive-flex, .responsive-summary {
+    flex-direction: column !important;
+    gap: 8px !important;
+    align-items: stretch !important;
+  }
+  .responsive-header {
+    flex-direction: column !important;
+    gap: 6px !important;
+    align-items: flex-start !important;
+    padding: 10px 4px !important;
+  }
+  .responsive-padding {
+    padding: 6px !important;
+  }
+  .responsive-table {
+    font-size: 11px !important;
+  }
+  .responsive-hide-mobile {
+    display: none !important;
+  }
+}
+
+/* Make tables scrollable on mobile */
+.responsive-table-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}

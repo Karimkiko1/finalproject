@@ -498,6 +498,7 @@ const TripAssignment = () => {
   // UI
   return (
     <div
+      className="responsive-padding"
       style={{
         padding: "32px",
         margin: "0 auto",
@@ -510,7 +511,7 @@ const TripAssignment = () => {
       }}
     >
       {/* Header (match CBMCalculator style) */}
-      <div style={{
+      <div className="responsive-header" style={{
         background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)',
         borderRadius: 14,
         padding: '36px 28px 24px 28px',
@@ -617,6 +618,7 @@ const TripAssignment = () => {
 
       {/* Action Buttons */}
       <div
+        className="responsive-flex responsive-padding"
         style={{
           background: "#fff",
           borderRadius: 14,
@@ -727,7 +729,7 @@ const TripAssignment = () => {
     
       {/* Summary Section (moved from modal, styled like CBMCalculator) */}
       {summary && (
-        <div style={{
+        <div className="responsive-summary responsive-padding" style={{
           background: '#fff',
           borderRadius: 18,
           padding: '40px 36px 28px 36px',
@@ -838,14 +840,14 @@ const TripAssignment = () => {
 
       {/* Supplier Level Table (styled like CBMCalculator) */}
       {summary && (
-        <div style={{ background: '#fff', borderRadius: 14, padding: 24, boxShadow: '0 2px 12px 0 rgba(0,0,0,0.04)', marginBottom: 32 }}>
+        <div className="responsive-padding" style={{ background: '#fff', borderRadius: 14, padding: 24, boxShadow: '0 2px 12px 0 rgba(0,0,0,0.04)', marginBottom: 32 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <h3 style={{ color: '#0f172a', fontWeight: 700, fontSize: 20, marginBottom: 0 }}>
               Supplier View
             </h3>
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15, background: '#f8fafc', borderRadius: 10, overflow: 'hidden' }}>
+          <div className="responsive-table-wrapper">
+            <table className="responsive-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15, background: '#f8fafc', borderRadius: 10, overflow: 'hidden' }}>
               <thead>
                 <tr style={{ background: '#e0e7ef' }}>
                   <th style={{ padding: '10px 8px' }}>Supplier</th>
@@ -880,14 +882,14 @@ const TripAssignment = () => {
 
       {/* Area Level Table (styled like CBMCalculator) */}
       {summary && (
-        <div style={{ background: '#fff', borderRadius: 14, padding: 24, boxShadow: '0 2px 12px 0 rgba(0,0,0,0.04)', marginBottom: 32 }}>
+        <div className="responsive-padding" style={{ background: '#fff', borderRadius: 14, padding: 24, boxShadow: '0 2px 12px 0 rgba(0,0,0,0.04)', marginBottom: 32 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <h3 style={{ color: '#0f172a', fontWeight: 700, fontSize: 20, marginBottom: 0 }}>
               Area View
             </h3>
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15, background: '#f8fafc', borderRadius: 10, overflow: 'hidden' }}>
+          <div className="responsive-table-wrapper">
+            <table className="responsive-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15, background: '#f8fafc', borderRadius: 10, overflow: 'hidden' }}>
               <thead>
                 <tr style={{ background: '#e0e7ef' }}>
                   <th style={{ padding: '10px 8px' }}>Area</th>
@@ -968,29 +970,26 @@ const TripAssignment = () => {
 
       {/* Results Table */}
       {results.length > 0 && (
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: 14,
-            padding: 24,
-            boxShadow: "0 2px 12px 0 rgba(0,0,0,0.04)",
-            marginBottom: 32,
-          }}
+        <div className="responsive-padding" style={{
+          background: "#fff",
+          borderRadius: 14,
+          padding: 24,
+          boxShadow: "0 2px 12px 0 rgba(0,0,0,0.04)",
+          marginBottom: 32,
+        }}
         >
           <h3 style={{ color: "#0f172a", fontWeight: 700, fontSize: 20, marginBottom: 10 }}>
             Assigned Trips (First 10 Rows)
           </h3>
-          <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: 15,
-                background: "#f8fafc",
-                borderRadius: 10,
-                overflow: "hidden",
-              }}
-            >
+          <div className="responsive-table-wrapper">
+            <table className="responsive-table" style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontSize: 15,
+              background: "#f8fafc",
+              borderRadius: 10,
+              overflow: "hidden",
+            }}>
               <thead>
                 <tr style={{ background: "#e0e7ef" }}>
                   {Object.keys(results[0])
