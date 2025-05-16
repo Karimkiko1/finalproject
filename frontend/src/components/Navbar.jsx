@@ -18,7 +18,7 @@ const Navbar = () => (
     background: "#f8fafc",
     borderBottom: "1px solid #e5e7eb"
   }}>
-    <Link to="/" style={{
+    <Link to="/cbm" style={{
       fontWeight: 500,
       textDecoration: "none",
       padding: "10px 18px",
