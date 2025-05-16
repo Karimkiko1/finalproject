@@ -14,6 +14,7 @@ function App() {
     // { to: "/RetailersLocations", label: "Retailers Locations" },
     { to: "/trips", label: "Trip Assignment" },
     { to: "/supplier-trip-assignment", label: "Supplier Trip Assignment" },
+    
   ];
 
   const navColor = "#f59e42";
@@ -72,6 +73,8 @@ function App() {
         <Route path="/trips" element={<TripAssignment />} />
         <Route path="/supplier-trip-assignment" element={<SupplierTripAssignment />} />
         <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/" element={<Navigate to="/cbm" replace />} />
+        <Route path="*" element={<Navigate to="/cbm" replace />} />
       </Routes>
     </Router>
   );
