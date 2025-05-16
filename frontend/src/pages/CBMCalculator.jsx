@@ -698,6 +698,7 @@ const CBMCalculator = () => {
           justifyContent: "center",
           position: "relative",
           margin: 0,
+          margin: 0,
           boxSizing: "border-box",
           overflow: "hidden"
         }}>
