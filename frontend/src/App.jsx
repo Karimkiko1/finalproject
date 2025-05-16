@@ -2,18 +2,19 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
 import Navbar from './components/Navbar.jsx';
 import Dashboard from './pages/Dashboard.jsx';
-import DriversLocations from './pages/DriversLocations.jsx';
-import RetailersLocations from './pages/RetailersLocations.jsx';
+// import DriversLocations from './pages/DriversLocations.jsx';
+// import RetailersLocations from './pages/RetailersLocations.jsx';
 import CBMCalculator from './pages/CBMCalculator.jsx';
 import TripAssignment from './pages/TripAssignment.jsx';
 import SupplierTripAssignment from './pages/SupplierTripAssignment.jsx';
 function App() {
   const navLinks = [
     { to: "/cbm", label: "Weights & Dimensions" },
-    { to: "/drivers", label: "Drivers Locations" },
-    { to: "/RetailersLocations", label: "Retailers Locations" },
+    // { to: "/drivers", label: "Drivers Locations" },
+    // { to: "/RetailersLocations", label: "Retailers Locations" },
     { to: "/trips", label: "Trip Assignment" },
     { to: "/supplier-trip-assignment", label: "Supplier Trip Assignment" },
+    
   ];
 
   const navColor = "#f59e42";
@@ -66,12 +67,12 @@ function App() {
         ))}
       </nav>
       <Routes>
-        <Route path="/drivers" element={<DriversLocations />} />
-        <Route path="/RetailersLocations" element={<RetailersLocations />} />
+{/*         <Route path="/drivers" element={<DriversLocations />} /> */}
+{/*         <Route path="/RetailersLocations" element={<RetailersLocations />} /> */}
         <Route path="/cbm" element={<CBMCalculator />} />
         <Route path="/trips" element={<TripAssignment />} />
         <Route path="/supplier-trip-assignment" element={<SupplierTripAssignment />} />
-        {/* Redirect root to /cbm as homepage */}
+        <Route path="*" element={<Navigate to="/" replace />} />
         <Route path="/" element={<Navigate to="/cbm" replace />} />
         <Route path="*" element={<Navigate to="/cbm" replace />} />
       </Routes>

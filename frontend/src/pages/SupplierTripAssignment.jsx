@@ -499,7 +499,6 @@ const SupplierTripAssignment = () => {
     <div
       style={{
         padding: "32px",
-        maxWidth: 1200,
         margin: "0 auto",
         fontFamily: "Inter, Segoe UI, Arial, sans-serif",
         background: "linear-gradient(120deg, #f8fafc 0%, #e0e7ef 100%)",
