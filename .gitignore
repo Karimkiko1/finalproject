@@ -53,4 +53,5 @@ module.exports = {
 };
 node_modules
 node_modules
+backend/credentials.json
 .vercel
