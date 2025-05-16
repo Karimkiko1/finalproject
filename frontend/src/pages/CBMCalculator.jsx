@@ -510,8 +510,8 @@ const CBMCalculator = () => {
     return (
       <div style={{
         padding: '32px',
-        maxWidth: 1200,
-        margin: '0 auto',
+        // maxWidth: 1200, // Remove or comment this line
+        margin: 0,         // Change this line
         fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
         background: 'linear-gradient(120deg, #f8fafc 0%, #e0e7ef 100%)',
         minHeight: '100vh',
@@ -553,92 +553,162 @@ const CBMCalculator = () => {
         </div>
 
         {/* Supplier Selection and Controls */}
-        <div style={{
-          background: '#fff',
-          borderRadius: 14,
-          padding: "18px 28px",
-          boxShadow: '0 2px 12px 0 rgba(0,0,0,0.04)',
-          marginBottom: 28,
-          display: "flex",
-          alignItems: "center",
-          gap: 18,
-          justifyContent: "space-between",
-          position: "sticky",
-          top: 0,
-          zIndex: 10
-        }}>
-          <a
-            href="https://redash.cartona.com/queries/22442"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              background: 'linear-gradient(90deg, #22c55e 0%, #bef264 100%)',
-              color: '#fff',
-              padding: '12px 28px',
-              borderRadius: 8,
-              fontWeight: 600,
-              fontSize: 16,
-              textDecoration: 'none',
-              boxShadow: '0 2px 8px 0 rgba(34,197,94,0.08)'
-            }}
-          >
-            Query Link
-          </a>
-          <button
-            onClick={handleRefreshCBM}
-            disabled={refreshing}
-            style={{
-              background: 'linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)',
-              color: '#fff',
-              padding: '10px 22px',
-              borderRadius: 8,
-              fontWeight: 700,
-              fontSize: 16,
-              border: 'none',
-              cursor: refreshing ? 'not-allowed' : 'pointer',
-              boxShadow: '0 2px 8px 0 rgba(37,99,235,0.08)'
-            }}
-          >
-            {refreshing ? 'Refreshing…' : 'Click Here to Update Data'}
-          </button>
-          <select
-            value={selectedSupplier}
-            onChange={(e) => setSelectedSupplier(e.target.value)}
-            style={{
-              padding: '12px 28px',
-              borderRadius: 8,
-              border: '1px solid #cbd5e1',
-              fontSize: 16,
-              background: '#fff',
-              cursor: 'pointer',
-              minWidth: 200
-            }}
-          >
-            <option value="">Overall Pending Assigne</option>
-            {suppliers.map(supplier => (
-              <option key={supplier} value={supplier}>{supplier}</option>
-            ))}
-          </select>
-          {filteredData.length > 0 && (
-            <span style={{ color: '#2563eb', fontWeight: 500, fontSize: 15 }}>
-              {filteredData.length} rows loaded
-            </span>
-          )}
-          {!fallbackData && (
-            <span style={{ color: '#e11d48', fontWeight: 500, fontSize: 15 }}>
-              Fallback data not loaded
-            </span>
-          )}
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: 16,
+            padding: "22px 32px",
+            boxShadow: "0 4px 24px 0 rgba(37,99,235,0.07)",
+            marginBottom: 32,
+            display: "flex",
+            alignItems: "center",
+            gap: 24,
+            justifyContent: "space-between",
+            position: "sticky",
+            top: 0,
+            zIndex: 10,
+            minHeight: 72,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+            <a
+              href="https://redash.cartona.com/queries/22442"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                background: "linear-gradient(90deg, #22c55e 0%, #bef264 100%)",
+                color: "#fff",
+                padding: "10px 24px",
+                borderRadius: 8,
+                fontWeight: 600,
+                fontSize: 16,
+                textDecoration: "none",
+                boxShadow: "0 2px 8px 0 rgba(34,197,94,0.08)",
+                transition: "box-shadow 0.2s, transform 0.2s",
+                border: "none",
+                outline: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+                <rect width="20" height="20" rx="4" fill="#fff" fillOpacity="0.1"/>
+                <path d="M7 10h6m0 0l-2-2m2 2l-2 2" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Query Link
+            </a>
+            <button
+              onClick={handleRefreshCBM}
+              disabled={refreshing}
+              style={{
+                background: refreshing
+                  ? "linear-gradient(90deg, #cbd5e1 0%, #e0e7ef 100%)"
+                  : "linear-gradient(90deg, #2563eb 0%, #38bdf8 100%)",
+                color: "#fff",
+                padding: "10px 24px",
+                borderRadius: 8,
+                fontWeight: 700,
+                fontSize: 16,
+                border: "none",
+                cursor: refreshing ? "not-allowed" : "pointer",
+                boxShadow: "0 2px 8px 0 rgba(37,99,235,0.08)",
+                transition: "box-shadow 0.2s, transform 0.2s",
+                outline: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              {refreshing && (
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 18,
+                    height: 18,
+                    border: "2.5px solid #fff",
+                    borderTop: "2.5px solid #38bdf8",
+                    borderRadius: "50%",
+                    marginRight: 8,
+                    animation: "spin 1s linear infinite",
+                  }}
+                />
+              )}
+              {refreshing ? "Refreshing…" : "Update Data"}
+            </button>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+            <select
+              value={selectedSupplier}
+              onChange={(e) => setSelectedSupplier(e.target.value)}
+              style={{
+                padding: "10px 24px",
+                borderRadius: 8,
+                border: "1.5px solid #cbd5e1",
+                fontSize: 16,
+                background: "#f8fafc",
+                color: "#2563eb",
+                fontWeight: 600,
+                cursor: "pointer",
+                minWidth: 220,
+                outline: "none",
+                boxShadow: "0 1px 4px 0 rgba(37,99,235,0.04)",
+                transition: "border 0.2s",
+              }}
+            >
+              <option value="">All Suppliers</option>
+              {suppliers.map((supplier) => (
+                <option key={supplier} value={supplier}>
+                  {supplier}
+                </option>
+              ))}
+            </select>
+            {filteredData.length > 0 && (
+              <span
+                style={{
+                  color: "#2563eb",
+                  fontWeight: 500,
+                  fontSize: 15,
+                  background: "#f1f5f9",
+                  borderRadius: 7,
+                  padding: "7px 16px",
+                  marginLeft: 4,
+                }}
+              >
+                {filteredData.length} rows loaded
+              </span>
+            )}
+            {!fallbackData && (
+              <span
+                style={{
+                  color: "#e11d48",
+                  fontWeight: 500,
+                  fontSize: 15,
+                  background: "#fee2e2",
+                  borderRadius: 7,
+                  padding: "7px 16px",
+                  marginLeft: 4,
+                }}
+              >
+                Fallback data not loaded
+              </span>
+            )}
+          </div>
         </div>
-
+        <style>
+        {`
+        @keyframes spin {
+          0% { transform: rotate(0deg);}
+          100% { transform: rotate(360deg);}
+        }
+        `}
+        </style>
         {/* Summary Section */}
         <div style={{
           background: "#fff",
           borderRadius: 18,
           padding: "36px 32px 24px 32px",
           boxShadow: "0 2px 12px 0 rgba(0,0,0,0.04)",
-          marginBottom: 32,
-          marginTop: 24,
           width: "100%",
           minHeight: 420,
           display: "flex",
@@ -646,9 +716,7 @@ const CBMCalculator = () => {
           alignItems: "center",
           justifyContent: "center",
           position: "relative",
-          maxWidth: 1200,
-          marginLeft: "auto",
-          marginRight: "auto",
+          margin: 0,
           boxSizing: "border-box",
           overflow: "hidden"
         }}>
