@@ -551,7 +551,7 @@ const CBMCalculator = () => {
               lineHeight: 1.1,
               textShadow: '0 2px 8px rgba(37,99,235,0.10)'
             }}>
-              CBM &amp; Weight Calculator
+              Weights &amp; Dimensions Overview
             </h1>
             <div style={{
               fontSize: 21,
