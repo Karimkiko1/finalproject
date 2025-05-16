@@ -45,7 +45,8 @@
   },
   "scripts": {
     "build": "webpack --mode production",
-    "start": "webpack serve --mode development"
+    "start": "webpack serve --mode development",
+    "test": "echo \"No tests specified\" && exit 0"
   },
   "devDependencies": {
     "@babel/core": "^7.27.1",
